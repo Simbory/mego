@@ -1,6 +1,7 @@
 package mego
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
 	"runtime/debug"
@@ -10,6 +11,7 @@ import (
 var (
 	locked  = false
 	routing = newRouteTree()
+	RootDir = workingDir()
 
 	notFoundHandler http.HandlerFunc = handle404
 	intErrorHandler http.HandlerFunc = handle500
@@ -36,7 +38,13 @@ func handle500(w http.ResponseWriter, r *http.Request) {
 	var debugStack = string(debug.Stack())
 	debugStack = strings.Replace(debugStack, "<", "&lt;", -1)
 	debugStack = strings.Replace(debugStack, ">", "&gt;", -1)
-	w.Write([]byte(debugStack))
+	buf := &bytes.Buffer{}
+	if err, ok := rec.(error); ok {
+		buf.WriteString(err.Error())
+		buf.WriteString("\r\n\r\n")
+	}
+	buf.WriteString(debugStack)
+	w.Write(buf.Bytes())
 }
 
 // AddFunc add route validation func
@@ -103,5 +111,17 @@ func Handle500(h http.HandlerFunc) {
 }
 
 func Run(addr string) {
+	svr := &serverHandler{}
+	err := http.ListenAndServe(addr, svr)
+	if err != nil {
+		panic(err)
+	}
+}
 
+func RunTLS(addr, certFile, keyFile string) {
+	svr := &serverHandler{}
+	err := http.ListenAndServeTLS(addr, certFile, keyFile, svr)
+	if err != nil {
+		panic(err)
+	}
 }

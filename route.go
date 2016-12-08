@@ -467,12 +467,12 @@ func (tree *routeTree) lookup(urlPath string) (map[string]ReqHandler, map[string
 	return nil, nil, nil
 }
 
-func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) error {
+func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) {
 	if len(routePath) == 0 {
-		return errors.New("'routePath' param cannot be empty")
+		panic(errors.New("'routePath' param cannot be empty"))
 	}
 	if handler == nil {
-		return errors.New("'handler' param cannot be nil")
+		panic(errors.New("'handler' param cannot be nil"))
 	}
 	if routePath == "/" {
 		if tree.handlers == nil {
@@ -482,16 +482,15 @@ func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) er
 		} else {
 			tree.handlers[strings.ToUpper(method)] = handler
 		}
-		return nil
+		return
 	}
 	branch, err := newRouteNode(routePath, method, handler)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	if err = tree.addChild(branch); err != nil {
-		return err
+		panic(err)
 	}
-	return nil
 }
 
 func newRouteTree() *routeTree {
@@ -514,10 +513,6 @@ func newRouteTree() *routeTree {
 
 func isA2Z(c byte) bool {
 	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
-}
-
-func isWord(c byte) bool {
-	return isA2Z(c) || c == '_'
 }
 
 func isNumber(c byte) bool {
