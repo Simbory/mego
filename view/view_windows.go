@@ -1,7 +1,8 @@
-package mego
+package view
 
 import (
 	"strings"
+	"github.com/Simbory/mego"
 )
 
 func fixPath(src string) string {
@@ -9,5 +10,5 @@ func fixPath(src string) string {
 }
 
 func viewDir() string {
-	return fixPath(strAdd(RootDir, "\\views"))
+	return fixPath(mego.RootDir + "\\views\\")
 }

@@ -1,4 +1,4 @@
-package mego
+package view
 
 import (
 	"bytes"
@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"github.com/Simbory/mego"
+	"github.com/Simbory/mego/watcher"
 	"sync"
 )
 
@@ -35,9 +37,9 @@ func (vf *viewFile) visit(paths string, f os.FileInfo, err error) error {
 		return nil
 	}
 	replace := strings.NewReplacer("\\", "/")
-	a := str2Byte(paths)
+	a := []byte(paths)
 	a = a[len(vf.root):]
-	file := strings.TrimLeft(replace.Replace(byte2Str(a)), "/")
+	file := strings.TrimLeft(replace.Replace(string(a)), "/")
 	subDir := filepath.Dir(file)
 	if _, ok := vf.files[subDir]; ok {
 		vf.files[subDir] = append(vf.files[subDir], file)
@@ -50,10 +52,12 @@ func (vf *viewFile) visit(paths string, f os.FileInfo, err error) error {
 }
 
 type viewContainer struct {
-	viewExt     string
-	initialized bool
-	views       map[string]*view
-	funcMaps    template.FuncMap
+	viewExt      string
+	initialized  bool
+	viewDir      string
+	views        map[string]*view
+	funcMaps     template.FuncMap
+	compilerLock sync.RWMutex
 }
 
 func (vc *viewContainer) addViewFunc(name string, f interface{}) {
@@ -106,7 +110,8 @@ func (vc *viewContainer) getTemplateDeep(file, viewExt, parent string, t *templa
 	} else {
 		fileAbsPath = filepath.Join(vc.viewDir, file)
 	}
-	if !isFile(fileAbsPath) {
+	stat,err := os.Stat(fileAbsPath)
+	if err != nil || stat.IsDir() {
 		return nil, [][]string{}, fmt.Errorf("Cannot open the view file %s", file)
 	}
 	data, err := ioutil.ReadFile(fileAbsPath)
@@ -118,7 +123,7 @@ func (vc *viewContainer) getTemplateDeep(file, viewExt, parent string, t *templa
 		return nil, [][]string{}, err
 	}
 	reg := regexp.MustCompile("{{" + "[ ]*template[ ]+\"([^\"]+)\"")
-	allSub := reg.FindAllStringSubmatch(byte2Str(data), -1)
+	allSub := reg.FindAllStringSubmatch(string(data), -1)
 	for _, m := range allSub {
 		if len(m) == 2 {
 			look := t.Lookup(m[1])
@@ -166,7 +171,7 @@ func (vc *viewContainer) getTemplateLoop(t0 *template.Template, viewExt string, 
 					continue
 				}
 				reg := regexp.MustCompile("{{" + "[ ]*define[ ]+\"([^\"]+)\"")
-				allSub := reg.FindAllStringSubmatch(byte2Str(data), -1)
+				allSub := reg.FindAllStringSubmatch(string(data), -1)
 				for _, sub := range allSub {
 					if len(sub) == 2 && sub[1] == m[1] {
 						var subMods1 [][]string
@@ -186,7 +191,10 @@ func (vc *viewContainer) getTemplateLoop(t0 *template.Template, viewExt string, 
 }
 
 func (vc *viewContainer) compileViews() error {
+	vc.compilerLock.Lock()
+	defer vc.compilerLock.Unlock()
 	dir := viewDir()
+	vc.viewDir = dir
 	if _, err := os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
 			return err
@@ -220,7 +228,7 @@ func (vc *viewContainer) renderView(viewPath string, viewData interface{}) ([]by
 		return nil, errors.New("The parameger 'viewPath' cannot be empty")
 	}
 	if !strings.HasSuffix(viewPath, vc.viewExt) {
-		viewPath = strAdd(viewPath, vc.viewExt)
+		viewPath = viewPath + vc.viewExt
 	}
 	tpl := vc.getView(viewPath)
 	if tpl == nil {
@@ -245,33 +253,51 @@ var (
 		viewExt:     ".html",
 		initialized: false,
 	}
-	compileLock = &sync.RWMutex{}
 )
 
+func init() {
+	mego.OnInit(func(){
+		dir := viewDir()
+		stat,err := os.Stat(dir)
+		if err != nil || !stat.IsDir() {
+			return
+		}
+		fsWatcher := watcher.Singleton()
+		fsWatcher.AddHandler(&fsViewHandler{fsWatcher})
+		fsWatcher.Start()
+		views.compileViews()
+		fsWatcher.AddWatch(dir)
+		filepath.Walk(dir, func(p string, info os.FileInfo, er error) error {
+			if info.IsDir() {
+				fsWatcher.AddWatch(p)
+			}
+			return nil
+		})
+	})
+}
+
 func SetViewExt(ext string) {
-	assertLock()
+	mego.AssertLock()
 	if len(ext) > 0 {
 		if !strings.HasPrefix(ext, ".") {
-			ext = strAdd(".", ext)
+			ext = "." + ext
 		}
 		views.viewExt = ext
 	}
 }
 
 func AddViewFunc(name string, f interface{}) {
-	assertLock()
+	mego.AssertLock()
 	views.addViewFunc(name, f)
 }
 
-func View(viewPath string, data interface{}) Result {
-	if views.initialized == false {
-		compileLock.Lock()
-		views.compileViews()
-		compileLock.Unlock()
+func View(viewPath string, data interface{}) mego.Result {
+	if !views.initialized {
+		panic(errors.New("Cannot call this function before it is initialized"))
 	}
 	resultBytes, err := views.renderView(viewPath, data)
 	if err != nil {
 		panic(err)
 	}
-	return Content(byte2Str(resultBytes), "text/html")
+	return mego.Content(resultBytes, "text/html")
 }

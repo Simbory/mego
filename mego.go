@@ -12,12 +12,12 @@ var (
 	locked  = false
 	routing = newRouteTree()
 	RootDir = workingDir()
-
+	initEvents = []func(){}
 	notFoundHandler http.HandlerFunc = handle404
 	intErrorHandler http.HandlerFunc = handle500
 )
 
-func assertLock() {
+func AssertLock() {
 	if locked {
 		panic(errors.New("Cannot call this function while the server is runing."))
 	}
@@ -47,54 +47,69 @@ func handle500(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf.Bytes())
 }
 
+func initMego() {
+	if len(initEvents) > 0 {
+		for _, h := range initEvents {
+			h()
+		}
+	}
+}
+
+func OnInit(h func()) {
+	AssertLock()
+	if h != nil {
+		initEvents = append(initEvents, h)
+	}
+}
+
 // AddFunc add route validation func
 func AddRouteFunc(name string, fun RouteFunc) {
-	assertLock()
+	AssertLock()
 	routing.addFunc(name, fun)
 }
 
 func Get(routePath string, handler ReqHandler) {
-	assertLock()
+	AssertLock()
 	routing.addRoute("GET", routePath, handler)
 }
 
 func Post(routePath string, handler ReqHandler) {
-	assertLock()
+	AssertLock()
 	routing.addRoute("POST", routePath, handler)
 }
 
 func Put(routePath string, handler ReqHandler) {
-	assertLock()
+	AssertLock()
 	routing.addRoute("PUT", routePath, handler)
 }
 
 func Options(routePath string, handler ReqHandler) {
-	assertLock()
+	AssertLock()
 	routing.addRoute("OPTIONS", routePath, handler)
 }
 
 func Head(routePath string, handler ReqHandler) {
-	assertLock()
+	AssertLock()
 	routing.addRoute("HEAD", routePath, handler)
 }
 
 func Delete(routePath string, handler ReqHandler) {
-	assertLock()
+	AssertLock()
 	routing.addRoute("DELETE", routePath, handler)
 }
 
 func Trace(routePath string, handler ReqHandler) {
-	assertLock()
+	AssertLock()
 	routing.addRoute("RACE", routePath, handler)
 }
 
 func Connect(routePath string, handler ReqHandler) {
-	assertLock()
+	AssertLock()
 	routing.addRoute("CONNECT", routePath, handler)
 }
 
 func Any(routePath string, handler ReqHandler) {
-	assertLock()
+	AssertLock()
 	routing.addRoute("*", routePath, handler)
 }
 
@@ -111,6 +126,7 @@ func Handle500(h http.HandlerFunc) {
 }
 
 func Run(addr string) {
+	initMego()
 	svr := &serverHandler{}
 	err := http.ListenAndServe(addr, svr)
 	if err != nil {
@@ -119,6 +135,7 @@ func Run(addr string) {
 }
 
 func RunTLS(addr, certFile, keyFile string) {
+	initMego()
 	svr := &serverHandler{}
 	err := http.ListenAndServeTLS(addr, certFile, keyFile, svr)
 	if err != nil {

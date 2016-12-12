@@ -1,6 +1,6 @@
 // +build !windows
 
-package mego
+package view
 
 import (
 	"strings"
@@ -11,5 +11,5 @@ func fixPath(src string) string {
 }
 
 func viewDir() string {
-	return fixPath(strAdd(RootDir, "/views"))
+	return fixPath(strAdd(RootDir, "/views/"))
 }

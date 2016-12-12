@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"errors"
 )
 
 // Result the request result interface
@@ -128,15 +129,22 @@ func NewResult() *ContentResult {
 	}
 }
 
-func Content(str string, cntType string) Result {
+func Content(data interface{}, cntType string) Result {
 	var resp = NewResult()
 	if len(cntType) < 1 {
 		resp.ContentType = "text/plain"
 	} else {
 		resp.ContentType = cntType
 	}
-	if len(str) > 0 {
-		resp.Write(str2Byte(str))
+	switch data.(type) {
+	case string:
+		resp.Write(str2Byte(data.(string)))
+	case []byte:
+		resp.Write(data.([]byte))
+	case byte:
+		resp.Write([]byte{data.(byte)})
+	default:
+		panic(errors.New("Unsupported data type"))
 	}
 	return resp
 }
