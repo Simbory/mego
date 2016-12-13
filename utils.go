@@ -1,7 +1,6 @@
 package mego
 
 import (
-	"os"
 	"strings"
 	"unsafe"
 )
@@ -21,28 +20,4 @@ func strAdd(arr ...string) string {
 		return ""
 	}
 	return strings.Join(arr, "")
-}
-
-func isFile(path string) bool {
-	state, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return !state.IsDir()
-}
-
-func isDir(path string) bool {
-	state, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return state.IsDir()
-}
-
-func workingDir() string {
-	p, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	return p
 }

@@ -19,7 +19,7 @@ func (vh *fsViewHandler)CanHandle(path string) bool {
 func (vh *fsViewHandler)Handle(ev *fsnotify.Event) {
 	strFile := strings.ToLower(path.Clean(ev.Name))
 	if ev.Op&fsnotify.Remove == fsnotify.Remove {
-		if !strings.HasSuffix(strFile, views.viewExt) {
+		if !strings.HasSuffix(strFile, viewSingleton.viewExt) {
 			vh.fsWatcher.RemoveWatch(ev.Name)
 		}
 	} else {
@@ -27,5 +27,5 @@ func (vh *fsViewHandler)Handle(ev *fsnotify.Event) {
 			vh.fsWatcher.AddWatch(ev.Name)
 		}
 	}
-	views.compileViews()
+	viewSingleton.compileViews()
 }

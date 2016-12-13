@@ -2,13 +2,22 @@ package view
 
 import (
 	"strings"
-	"github.com/Simbory/mego"
 )
 
 func fixPath(src string) string {
 	return strings.Replace(src, "/", "\\", -1)
 }
 
-func viewDir() string {
-	return fixPath(mego.RootDir + "\\views\\")
+func defaultViewDir() string {
+	return fixPath(workingDir() + "\\views\\")
+}
+
+func dirSlash(dir string) string {
+	if strings.HasSuffix(dir, "\\") {
+		return dir
+	}
+	if strings.HasSuffix(dir, "/") {
+		return strings.TrimRight(dir, "/") + "\\"
+	}
+	return dir + "\\"
 }

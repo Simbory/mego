@@ -3,7 +3,6 @@ package mego
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -30,28 +29,6 @@ var (
 	reg4    = regexp.MustCompile("^[0-9]+(~)+[0-9]+$")
 	wordReg = regexp.MustCompile("^[\\w]+")
 )
-
-// Context the request context struct
-type Context struct {
-	req       *http.Request
-	res       http.ResponseWriter
-	routeData map[string]string
-}
-
-func (c *Context) Request() *http.Request {
-	return c.req
-}
-
-func (c *Context) Response() http.ResponseWriter {
-	return c.res
-}
-
-func (c *Context) RouteParam(key string) string {
-	if c.routeData == nil {
-		return ""
-	}
-	return c.routeData[key]
-}
 
 // HandlerFunc the route handler function
 type ReqHandler func(ctx *Context) interface{}

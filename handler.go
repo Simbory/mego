@@ -12,34 +12,57 @@ type serverHandler struct{}
 
 func (server *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer intErrorHandler(w, r)
-
-	method := strings.ToUpper(r.Method)
-
-	handlers, routeData, err := routing.lookup(r.URL.Path)
-	if err != nil {
-		panic(err)
-	}
-	var handler ReqHandler
-	var ok bool
-	if handlers != nil {
-		handler, ok = handlers[method]
-		if !ok {
-			handler, ok = handlers["*"]
+	var result interface{}
+	if len(staticFiles) > 0 {
+		for urlPath, filePath := range staticFiles {
+			if r.URL.Path == urlPath {
+				result = &FileResult{
+					FilePath: filePath,
+				}
+				break
+			}
 		}
 	}
-	if handler != nil && ok {
-		var ctx = &Context{
-			req:       r,
-			res:       w,
-			routeData: routeData,
-		}
-		result := handler(ctx)
-		if result != nil {
-			server.flush(w, r, result)
-			return
+	if result == nil && len(staticDirs) > 0 {
+		for pathPrefix, h := range staticDirs {
+			if strings.HasPrefix(r.URL.Path, pathPrefix) {
+				h.ServeHTTP(w, r)
+				return
+			}
 		}
 	}
-	notFoundHandler(w, r)
+	if result == nil {
+		method := strings.ToUpper(r.Method)
+		handlers, routeData, err := routing.lookup(r.URL.Path)
+		if err != nil {
+			panic(err)
+		}
+		var handler ReqHandler
+		var ok bool
+		if handlers != nil {
+			handler, ok = handlers[method]
+			if !ok {
+				handler, ok = handlers["*"]
+			}
+		}
+		if handler != nil && ok {
+			var ctx = &Context{
+				req:       r,
+				res:       w,
+				routeData: routeData,
+			}
+			filters.exec(r.URL.Path, ctx)
+			if ctx.ended {
+				return
+			}
+			result = handler(ctx)
+		}
+	}
+	if result != nil {
+		server.flush(w, r, result)
+	} else {
+		notFoundHandler(w, r)
+	}
 }
 
 func (server *serverHandler) flush(w http.ResponseWriter, req *http.Request, result interface{}) {

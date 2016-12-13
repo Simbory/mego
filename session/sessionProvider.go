@@ -10,7 +10,7 @@ import (
 // it can operate a SessionStore by its id.
 type SessionProvider interface {
 	SessionInit(gcLifetime int64, config string) error
-	SessionRead(sid string) (SessionStore, error)
+	SessionRead(sid string) SessionStore
 	SessionExist(sid string) bool
 	SessionRegenerate(oldSid, sid string) (SessionStore, error)
 	SessionDestroy(sid string) error
@@ -35,12 +35,12 @@ func (prov *memSessionProvider) SessionInit(maxLifeTime int64, savePath string) 
 }
 
 // SessionRead get memory session store by sid
-func (prov *memSessionProvider) SessionRead(sid string) (SessionStore, error) {
+func (prov *memSessionProvider) SessionRead(sid string) SessionStore {
 	prov.lock.RLock()
 	if element, ok := prov.sessions[sid]; ok {
 		go prov.SessionUpdate(sid)
 		prov.lock.RUnlock()
-		return element.Value.(*MemSessionStore), nil
+		return element.Value.(*MemSessionStore)
 	}
 	prov.lock.RUnlock()
 	prov.lock.Lock()
@@ -48,7 +48,7 @@ func (prov *memSessionProvider) SessionRead(sid string) (SessionStore, error) {
 	element := prov.list.PushFront(newStore)
 	prov.sessions[sid] = element
 	prov.lock.Unlock()
-	return newStore, nil
+	return newStore
 }
 
 // SessionExist check session store exist in memory session by sid

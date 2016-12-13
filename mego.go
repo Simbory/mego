@@ -11,10 +11,12 @@ import (
 var (
 	locked  = false
 	routing = newRouteTree()
-	RootDir = workingDir()
 	initEvents = []func(){}
+	staticDirs = make(map[string]http.Handler)
+	staticFiles = make(map[string]string)
 	notFoundHandler http.HandlerFunc = handle404
 	intErrorHandler http.HandlerFunc = handle500
+	filters = make(filterContainer)
 )
 
 func AssertLock() {
@@ -55,7 +57,7 @@ func initMego() {
 	}
 }
 
-func OnInit(h func()) {
+func OnStart(h func()) {
 	AssertLock()
 	if h != nil {
 		initEvents = append(initEvents, h)
@@ -113,6 +115,28 @@ func Any(routePath string, handler ReqHandler) {
 	routing.addRoute("*", routePath, handler)
 }
 
+func HandleStaticDir(pathPrefix, dirPath string) {
+	AssertLock()
+	if len(pathPrefix) == 0 {
+		panic(errors.New("The parameter 'pathPrefix' cannot be empty"))
+	}
+	if len(dirPath) == 0 {
+		dirPath = "."
+	}
+	if !strings.HasPrefix(pathPrefix, "/") {
+		pathPrefix = "/" + pathPrefix
+	}
+	if !strings.HasSuffix(pathPrefix, "/") {
+		pathPrefix = pathPrefix + "/"
+	}
+	staticDirs[pathPrefix] = http.FileServer(http.Dir(dirPath))
+}
+
+func HandleStaticFile(url, filePath string) {
+	AssertLock()
+	staticFiles[url] = filePath
+}
+
 func Handle404(h http.HandlerFunc) {
 	if h != nil {
 		notFoundHandler = h
@@ -123,6 +147,23 @@ func Handle500(h http.HandlerFunc) {
 	if h != nil {
 		intErrorHandler = h
 	}
+}
+
+func Filter(pathPrefix string, h func(*Context)) {
+	AssertLock()
+	if len(pathPrefix) == 0 {
+		panic(errors.New("The parameter 'pathPrefix' cannot be empty"))
+	}
+	if h == nil {
+		panic(errors.New("The parameter 'h' cannot be nil"))
+	}
+	if !strings.HasPrefix(pathPrefix, "/") {
+		pathPrefix = "/" + pathPrefix
+	}
+	if !strings.HasSuffix(pathPrefix, "/") {
+		pathPrefix = pathPrefix + "/"
+	}
+	filters.add(pathPrefix, h)
 }
 
 func Run(addr string) {

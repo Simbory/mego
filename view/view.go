@@ -249,14 +249,30 @@ func (vc *viewContainer) renderView(viewPath string, viewData interface{}) ([]by
 }
 
 var (
-	views = &viewContainer{
+	viewSingleton = &viewContainer{
 		viewExt:     ".html",
 		initialized: false,
 	}
+	featuredViewDir = defaultViewDir()
 )
 
+func workingDir() string {
+	p, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	return p
+}
+
+func viewDir() string {
+	if len(featuredViewDir) > 0 {
+		return featuredViewDir
+	}
+	return defaultViewDir()
+}
+
 func init() {
-	mego.OnInit(func(){
+	mego.OnStart(func(){
 		dir := viewDir()
 		stat,err := os.Stat(dir)
 		if err != nil || !stat.IsDir() {
@@ -265,7 +281,7 @@ func init() {
 		fsWatcher := watcher.Singleton()
 		fsWatcher.AddHandler(&fsViewHandler{fsWatcher})
 		fsWatcher.Start()
-		views.compileViews()
+		viewSingleton.compileViews()
 		fsWatcher.AddWatch(dir)
 		filepath.Walk(dir, func(p string, info os.FileInfo, er error) error {
 			if info.IsDir() {
@@ -276,26 +292,31 @@ func init() {
 	})
 }
 
+func UseView(dir string) {
+	mego.AssertLock()
+	featuredViewDir = dirSlash(dir)
+}
+
 func SetViewExt(ext string) {
 	mego.AssertLock()
 	if len(ext) > 0 {
 		if !strings.HasPrefix(ext, ".") {
 			ext = "." + ext
 		}
-		views.viewExt = ext
+		viewSingleton.viewExt = ext
 	}
 }
 
 func AddViewFunc(name string, f interface{}) {
 	mego.AssertLock()
-	views.addViewFunc(name, f)
+	viewSingleton.addViewFunc(name, f)
 }
 
 func View(viewPath string, data interface{}) mego.Result {
-	if !views.initialized {
+	if !viewSingleton.initialized {
 		panic(errors.New("Cannot call this function before it is initialized"))
 	}
-	resultBytes, err := views.renderView(viewPath, data)
+	resultBytes, err := viewSingleton.renderView(viewPath, data)
 	if err != nil {
 		panic(err)
 	}
