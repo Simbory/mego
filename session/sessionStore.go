@@ -2,8 +2,8 @@ package session
 
 import (
 	"net/http"
-	"time"
 	"sync"
+	"time"
 )
 
 // SessionStore the session store interface

@@ -1,6 +1,7 @@
 package session
 
 import (
+	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -8,7 +9,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"crypto/md5"
 )
 
 type sessionUUID [16]byte

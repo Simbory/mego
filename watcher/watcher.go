@@ -1,8 +1,8 @@
 package watcher
 
 import (
-	"github.com/fsnotify/fsnotify"
 	"errors"
+	"github.com/fsnotify/fsnotify"
 	"path"
 	"sync"
 )
@@ -90,7 +90,7 @@ var singletonLocker = sync.RWMutex{}
 func Singleton() *FileWatcher {
 	if singleton == nil {
 		singletonLocker.Lock()
-		s,err := NewWatcher()
+		s, err := NewWatcher()
 		singletonLocker.Unlock()
 		if err != nil {
 			panic(err)

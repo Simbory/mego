@@ -1,9 +1,9 @@
 package session
 
 import (
-	"time"
-	"sync"
 	"container/list"
+	"sync"
+	"time"
 )
 
 // SessionProvider contains global session methods and saved SessionStores.

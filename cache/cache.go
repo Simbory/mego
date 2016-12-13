@@ -3,12 +3,12 @@ package cache
 import (
 	"errors"
 	"fmt"
+	"github.com/Simbory/mego/watcher"
+	"os"
 	"path"
 	"strings"
 	"sync"
 	"time"
-	"github.com/Simbory/mego/watcher"
-	"os"
 )
 
 var (
@@ -98,7 +98,7 @@ func (c *CacheManager) Add(name string, data interface{}, dependencyFiles []stri
 				continue
 			}
 			fPath := path.Clean(file)
-			if stat,err := os.Stat(fPath); err != nil || stat.IsDir() {
+			if stat, err := os.Stat(fPath); err != nil || stat.IsDir() {
 				return fmt.Errorf("The dependency file does not exist: %s", file)
 			}
 			dFiles = append(dFiles, fPath)

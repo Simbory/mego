@@ -3,23 +3,25 @@ package mego
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net/http"
+	"regexp"
 	"runtime/debug"
 	"strings"
 )
 
 var (
-	locked  = false
-	routing = newRouteTree()
-	initEvents = []func(){}
-	staticDirs = make(map[string]http.Handler)
-	staticFiles = make(map[string]string)
-	notFoundHandler http.HandlerFunc = handle404
-	intErrorHandler http.HandlerFunc = handle500
-	filters = make(filterContainer)
+	locked                                                                = false
+	routing                                                               = newRouteTree()
+	initEvents                                                            = []func(){}
+	staticDirs                                                            = make(map[string]http.Handler)
+	staticFiles                                                           = make(map[string]string)
+	notFoundHandler http.HandlerFunc                                      = handle404
+	intErrorHandler func(http.ResponseWriter, *http.Request, interface{}) = handle500
+	filters                                                               = make(filterContainer)
 )
 
-func AssertLock() {
+func AssertNotLock() {
 	if locked {
 		panic(errors.New("Cannot call this function while the server is runing."))
 	}
@@ -30,11 +32,7 @@ func handle404(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Error 404: Not Found"))
 }
 
-func handle500(w http.ResponseWriter, r *http.Request) {
-	rec := recover()
-	if rec == nil {
-		return
-	}
+func handle500(w http.ResponseWriter, r *http.Request, rec interface{}) {
 	w.WriteHeader(500)
 	w.Header().Set("Content-Type", "text-plain")
 	var debugStack = string(debug.Stack())
@@ -58,7 +56,7 @@ func initMego() {
 }
 
 func OnStart(h func()) {
-	AssertLock()
+	AssertNotLock()
 	if h != nil {
 		initEvents = append(initEvents, h)
 	}
@@ -66,57 +64,61 @@ func OnStart(h func()) {
 
 // AddFunc add route validation func
 func AddRouteFunc(name string, fun RouteFunc) {
-	AssertLock()
+	AssertNotLock()
+	reg := regexp.MustCompile("^[a-zA-Z_][\\w]*$")
+	if !reg.Match([]byte(name)) {
+		panic(fmt.Errorf("Invalid route func name: %s", name))
+	}
 	routing.addFunc(name, fun)
 }
 
 func Get(routePath string, handler ReqHandler) {
-	AssertLock()
+	AssertNotLock()
 	routing.addRoute("GET", routePath, handler)
 }
 
 func Post(routePath string, handler ReqHandler) {
-	AssertLock()
+	AssertNotLock()
 	routing.addRoute("POST", routePath, handler)
 }
 
 func Put(routePath string, handler ReqHandler) {
-	AssertLock()
+	AssertNotLock()
 	routing.addRoute("PUT", routePath, handler)
 }
 
 func Options(routePath string, handler ReqHandler) {
-	AssertLock()
+	AssertNotLock()
 	routing.addRoute("OPTIONS", routePath, handler)
 }
 
 func Head(routePath string, handler ReqHandler) {
-	AssertLock()
+	AssertNotLock()
 	routing.addRoute("HEAD", routePath, handler)
 }
 
 func Delete(routePath string, handler ReqHandler) {
-	AssertLock()
+	AssertNotLock()
 	routing.addRoute("DELETE", routePath, handler)
 }
 
 func Trace(routePath string, handler ReqHandler) {
-	AssertLock()
+	AssertNotLock()
 	routing.addRoute("RACE", routePath, handler)
 }
 
 func Connect(routePath string, handler ReqHandler) {
-	AssertLock()
+	AssertNotLock()
 	routing.addRoute("CONNECT", routePath, handler)
 }
 
 func Any(routePath string, handler ReqHandler) {
-	AssertLock()
+	AssertNotLock()
 	routing.addRoute("*", routePath, handler)
 }
 
 func HandleStaticDir(pathPrefix, dirPath string) {
-	AssertLock()
+	AssertNotLock()
 	if len(pathPrefix) == 0 {
 		panic(errors.New("The parameter 'pathPrefix' cannot be empty"))
 	}
@@ -133,24 +135,26 @@ func HandleStaticDir(pathPrefix, dirPath string) {
 }
 
 func HandleStaticFile(url, filePath string) {
-	AssertLock()
+	AssertNotLock()
 	staticFiles[url] = filePath
 }
 
 func Handle404(h http.HandlerFunc) {
+	AssertNotLock()
 	if h != nil {
 		notFoundHandler = h
 	}
 }
 
-func Handle500(h http.HandlerFunc) {
+func Handle500(h func(http.ResponseWriter, *http.Request, interface{})) {
+	AssertNotLock()
 	if h != nil {
 		intErrorHandler = h
 	}
 }
 
 func Filter(pathPrefix string, h func(*Context)) {
-	AssertLock()
+	AssertNotLock()
 	if len(pathPrefix) == 0 {
 		panic(errors.New("The parameter 'pathPrefix' cannot be empty"))
 	}
@@ -168,7 +172,7 @@ func Filter(pathPrefix string, h func(*Context)) {
 
 func Run(addr string) {
 	initMego()
-	svr := &serverHandler{}
+	svr := &server{}
 	err := http.ListenAndServe(addr, svr)
 	if err != nil {
 		panic(err)
@@ -177,7 +181,7 @@ func Run(addr string) {
 
 func RunTLS(addr, certFile, keyFile string) {
 	initMego()
-	svr := &serverHandler{}
+	svr := &server{}
 	err := http.ListenAndServeTLS(addr, certFile, keyFile, svr)
 	if err != nil {
 		panic(err)

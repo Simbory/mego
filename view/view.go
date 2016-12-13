@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/Simbory/mego"
+	"github.com/Simbory/mego/watcher"
 	"html/template"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"github.com/Simbory/mego"
-	"github.com/Simbory/mego/watcher"
 	"sync"
 )
 
@@ -110,7 +110,7 @@ func (vc *viewContainer) getTemplateDeep(file, viewExt, parent string, t *templa
 	} else {
 		fileAbsPath = filepath.Join(vc.viewDir, file)
 	}
-	stat,err := os.Stat(fileAbsPath)
+	stat, err := os.Stat(fileAbsPath)
 	if err != nil || stat.IsDir() {
 		return nil, [][]string{}, fmt.Errorf("Cannot open the view file %s", file)
 	}
@@ -272,9 +272,9 @@ func viewDir() string {
 }
 
 func init() {
-	mego.OnStart(func(){
+	mego.OnStart(func() {
 		dir := viewDir()
-		stat,err := os.Stat(dir)
+		stat, err := os.Stat(dir)
 		if err != nil || !stat.IsDir() {
 			return
 		}
@@ -293,12 +293,12 @@ func init() {
 }
 
 func UseView(dir string) {
-	mego.AssertLock()
+	mego.AssertNotLock()
 	featuredViewDir = dirSlash(dir)
 }
 
 func SetViewExt(ext string) {
-	mego.AssertLock()
+	mego.AssertNotLock()
 	if len(ext) > 0 {
 		if !strings.HasPrefix(ext, ".") {
 			ext = "." + ext
@@ -308,7 +308,7 @@ func SetViewExt(ext string) {
 }
 
 func AddViewFunc(name string, f interface{}) {
-	mego.AssertLock()
+	mego.AssertNotLock()
 	viewSingleton.addViewFunc(name, f)
 }
 

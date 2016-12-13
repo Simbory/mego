@@ -1,9 +1,9 @@
 package session
 
 import (
-	"github.com/Simbory/mego"
 	"container/list"
 	"errors"
+	"github.com/Simbory/mego"
 	"net/http"
 	"net/url"
 	"time"
@@ -17,7 +17,7 @@ var manager *SessionManager
 var config *SessionConfig
 
 func init() {
-	mego.OnStart(func(){
+	mego.OnStart(func() {
 		if config == nil {
 			return
 		}
@@ -36,7 +36,7 @@ func init() {
 		if config.ManagerName == "memory" {
 			sessionProvides["memory"] = &memSessionProvider{list: list.New(), sessions: make(map[string]*list.Element)}
 		}
-		m,err := newSessionManager(config.ManagerName, config)
+		m, err := newSessionManager(config.ManagerName, config)
 		if err != nil {
 			panic(err)
 		}
@@ -46,7 +46,7 @@ func init() {
 }
 
 func RegSessionProvider(name string, provider SessionProvider) {
-	mego.AssertLock()
+	mego.AssertNotLock()
 	if provider == nil {
 		panic(errors.New("The parameter 'provider' canot be nil"))
 	}
@@ -57,15 +57,15 @@ func RegSessionProvider(name string, provider SessionProvider) {
 }
 
 func UseSession(sessionConfig *SessionConfig) {
-	mego.AssertLock()
+	mego.AssertNotLock()
 	if sessionConfig == nil {
 		sessionConfig = &SessionConfig{
-			ManagerName: "memory",
-			CookieName: "mego.SessionID",
+			ManagerName:     "memory",
+			CookieName:      "mego.SessionID",
 			EnableSetCookie: true,
-			GcLifetime: 3600,
-			MaxLifetime: 3600,
-			HTTPOnly: true,
+			GcLifetime:      3600,
+			MaxLifetime:     3600,
+			HTTPOnly:        true,
 		}
 	}
 	config = sessionConfig

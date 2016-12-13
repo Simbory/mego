@@ -8,10 +8,16 @@ import (
 	"strings"
 )
 
-type serverHandler struct{}
+type server struct{}
 
-func (server *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer intErrorHandler(w, r)
+func (server *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		rec := recover()
+		if rec == nil {
+			return
+		}
+		intErrorHandler(w, r, rec)
+	}()
 	var result interface{}
 	if len(staticFiles) > 0 {
 		for urlPath, filePath := range staticFiles {
@@ -65,7 +71,7 @@ func (server *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (server *serverHandler) flush(w http.ResponseWriter, req *http.Request, result interface{}) {
+func (server *server) flush(w http.ResponseWriter, req *http.Request, result interface{}) {
 	switch result.(type) {
 	case Result:
 		result.(Result).ExecResult(w, req)

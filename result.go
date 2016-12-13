@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
-	"errors"
 )
 
 // Result the request result interface

@@ -44,8 +44,8 @@ type RouteOpt interface {
 	HasDefaultValue() bool
 	DefaultValue() string
 	Setting() string
-	MaxLength() uint8
-	MinLength() uint8
+	MaxLength() int
+	MinLength() int
 }
 
 type routeOpt struct {
@@ -53,8 +53,8 @@ type routeOpt struct {
 	hasDefaultValue bool
 	defaultValue    string
 	setting         string
-	maxLength       uint8
-	minLength       uint8
+	maxLength       int
+	minLength       int
 }
 
 func (opt *routeOpt) Validation() string {
@@ -73,11 +73,11 @@ func (opt *routeOpt) Setting() string {
 	return opt.setting
 }
 
-func (opt *routeOpt) MaxLength() uint8 {
+func (opt *routeOpt) MaxLength() int {
 	return opt.maxLength
 }
 
-func (opt *routeOpt) MinLength() uint8 {
+func (opt *routeOpt) MinLength() int {
 	return opt.minLength
 }
 
@@ -668,28 +668,28 @@ func analyzeParamOption(path string) ([]string, map[string]RouteOpt, error) {
 					return nil, nil, errors.New("Invalid route parameter setting: " + sp)
 				}
 				if checkNumber(setting) {
-					i, err := strconv.ParseUint(setting, 10, 0)
+					i, err := strconv.ParseInt(setting, 10, 0)
 					if err != nil {
 						return nil, nil, err
 					}
-					opt.maxLength = uint8(i)
-					opt.minLength = uint8(i)
+					opt.maxLength = int(i)
+					opt.minLength = int(i)
 				} else if checkNumberRange(setting) {
 					numbers := strings.Split(setting, "~")
-					min, err := strconv.ParseUint(numbers[0], 10, 0)
+					min, err := strconv.ParseInt(numbers[0], 10, 0)
 					if err != nil {
 						return nil, nil, err
 					}
-					max, err := strconv.ParseUint(numbers[1], 10, 0)
+					max, err := strconv.ParseInt(numbers[1], 10, 0)
 					if err != nil {
 						return nil, nil, err
 					}
 					if min < max {
-						opt.minLength = uint8(min)
-						opt.maxLength = uint8(max)
+						opt.minLength = int(min)
+						opt.maxLength = int(max)
 					} else {
-						opt.minLength = uint8(max)
-						opt.maxLength = uint8(min)
+						opt.minLength = int(max)
+						opt.maxLength = int(min)
 					}
 				} else {
 					opt.maxLength = 255
@@ -707,7 +707,7 @@ func analyzeParamOption(path string) ([]string, map[string]RouteOpt, error) {
 }
 
 func any(urlPath string, opt RouteOpt) string {
-	var length = uint8(len(urlPath))
+	var length = len(urlPath)
 	if length >= opt.MinLength() && length <= opt.MaxLength() {
 		return urlPath
 	}
@@ -716,7 +716,7 @@ func any(urlPath string, opt RouteOpt) string {
 
 func word(urlPath string, opt RouteOpt) string {
 	bytes := wordReg.Find([]byte(urlPath))
-	if uint8(len(bytes)) >= opt.MinLength() && uint8(len(bytes)) <= opt.MaxLength() {
+	if len(bytes) >= opt.MinLength() && len(bytes) <= opt.MaxLength() {
 		return string(bytes)
 	}
 	return ""
@@ -730,11 +730,11 @@ func num(urlPath string, opt RouteOpt) string {
 		} else {
 			break
 		}
-		if uint8(len(numBytes)) >= opt.MaxLength() {
+		if len(numBytes) >= opt.MaxLength() {
 			break
 		}
 	}
-	if uint8(len(numBytes)) >= opt.MinLength() {
+	if len(numBytes) >= opt.MinLength() {
 		return string(numBytes)
 	}
 	return ""

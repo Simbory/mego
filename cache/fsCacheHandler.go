@@ -1,8 +1,8 @@
 package cache
 
 import (
-	"strings"
 	"github.com/fsnotify/fsnotify"
+	"strings"
 )
 
 type fsCacheHandler struct {
