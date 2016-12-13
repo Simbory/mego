@@ -6,7 +6,7 @@ import (
 )
 
 var indexCounter uint64
-var filterkeyLocker sync.RWMutex
+var filterLocker sync.RWMutex
 
 type filterKey struct {
 	index      uint64
@@ -14,8 +14,8 @@ type filterKey struct {
 }
 
 func newFilterKey(pathPrefix string) filterKey {
-	filterkeyLocker.Lock()
-	defer filterkeyLocker.Unlock()
+	filterLocker.Lock()
+	defer filterLocker.Unlock()
 	s := filterKey{
 		index:      indexCounter,
 		pathPrefix: pathPrefix,
