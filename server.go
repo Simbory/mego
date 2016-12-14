@@ -30,8 +30,13 @@ func (server *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if result == nil && len(staticDirs) > 0 {
+		urlWithSlash := r.URL.Path
+		if !strings.HasSuffix(urlWithSlash, "/") {
+			urlWithSlash = urlWithSlash + "/"
+		}
 		for pathPrefix, h := range staticDirs {
-			if strings.HasPrefix(r.URL.Path, pathPrefix) {
+			if strings.HasPrefix(urlWithSlash, pathPrefix) {
+				r.URL.Path = strings.TrimLeft(r.URL.Path, pathPrefix[0:len(pathPrefix)-1])
 				h.ServeHTTP(w, r)
 				return
 			}

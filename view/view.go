@@ -295,6 +295,7 @@ func init() {
 func UseView(dir string) {
 	mego.AssertNotLock()
 	featuredViewDir = dirSlash(dir)
+	AddViewFunc("include", include)
 }
 
 func SetViewExt(ext string) {
