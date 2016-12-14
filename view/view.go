@@ -294,7 +294,9 @@ func init() {
 
 func UseView(dir string) {
 	mego.AssertNotLock()
-	featuredViewDir = dirSlash(dir)
+	if len(dir) > 0 {
+		featuredViewDir = dirSlash(dir)
+	}
 	AddViewFunc("include", include)
 }
 
@@ -314,12 +316,19 @@ func AddViewFunc(name string, f interface{}) {
 }
 
 func View(viewPath string, data interface{}) mego.Result {
+	return &viewResult{
+		data:data,
+		viewName: viewPath,
+	}
+}
+
+func Render(viewName string, data interface{}) ([]byte, error) {
 	if !viewSingleton.initialized {
-		panic(errors.New("Cannot call this function before it is initialized"))
+		return nil, errors.New("Cannot call this function before it is initialized")
 	}
-	resultBytes, err := viewSingleton.renderView(viewPath, data)
+	resultBytes, err := viewSingleton.renderView(viewName, data)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return mego.Content(resultBytes, "text/html")
+	return resultBytes, nil
 }

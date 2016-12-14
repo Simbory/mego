@@ -90,12 +90,14 @@ var singletonLocker = sync.RWMutex{}
 func Singleton() *FileWatcher {
 	if singleton == nil {
 		singletonLocker.Lock()
-		s, err := NewWatcher()
-		singletonLocker.Unlock()
-		if err != nil {
-			panic(err)
+		if singleton == nil {
+			s, err := NewWatcher()
+			if err != nil {
+				panic(err)
+			}
+			singleton = s
 		}
-		singleton = s
+		singletonLocker.Unlock()
 	}
 	return singleton
 }

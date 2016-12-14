@@ -28,6 +28,7 @@ type CacheManager struct {
 	fileWatcher *watcher.FileWatcher
 	locker      *sync.RWMutex
 	started     bool
+	timer       *time.Timer
 }
 
 func (c *CacheManager) fileUsage(fPath string) int {
@@ -54,9 +55,6 @@ func (c *CacheManager) Get(name string) interface{} {
 		if time.Now().Before(data.expire) {
 			return data.data
 		}
-		c.locker.Lock()
-		delete(c.dataMap, name)
-		c.locker.Unlock()
 		return nil
 	}
 	return nil
@@ -145,8 +143,7 @@ func (c *CacheManager) Remove(name string) {
 }
 
 func (c *CacheManager) gc() {
-	go func() {
-		time.Sleep(c.gcFrequency)
+	c.timer = time.AfterFunc(gcLifeTime, func(){
 		var now = time.Now()
 		for name, data := range c.dataMap {
 			if now.Before(data.expire) {
@@ -155,7 +152,7 @@ func (c *CacheManager) gc() {
 				c.locker.Unlock()
 			}
 		}
-	}()
+	})
 }
 
 func (c *CacheManager) start() {
@@ -169,27 +166,35 @@ func (c *CacheManager) start() {
 	c.gc()
 }
 
-var cacheManager *CacheManager
-var gcConig time.Duration
+var singleton *CacheManager
+var singletonLock sync.RWMutex
+var gcLifeTime time.Duration
 
 func UseCache(gcFrequency time.Duration) {
-	gcConig = gcFrequency
+	gcLifeTime = gcFrequency
+	if gcLifeTime == 0 {
+		gcLifeTime = 10 * time.Second
+	}
 }
 
 func Cache() *CacheManager {
-	if cacheManager == nil {
-		if gcConig == 0 {
-			panic(errors.New("Could not start the cache manager: Invalid cache config setting 'gcFrequency'"))
+	if singleton == nil {
+		singletonLock.Lock()
+		if singleton == nil {
+			if gcLifeTime == 0 {
+				panic(errors.New("Could not start the cache manager. The function 'UseCache(gcFrequency time.Duration)' should be called first."))
+			}
+			fw := watcher.Singleton()
+			singleton = &CacheManager{
+				locker:      &sync.RWMutex{},
+				dataMap:     make(map[string]cacheData),
+				gcFrequency: gcLifeTime,
+				fileWatcher: fw,
+			}
+			fw.Start()
+			singleton.start()
 		}
-		fw := watcher.Singleton()
-		cacheManager = &CacheManager{
-			locker:      &sync.RWMutex{},
-			dataMap:     make(map[string]cacheData),
-			gcFrequency: gcConig,
-			fileWatcher: fw,
-		}
-		fw.Start()
-		cacheManager.start()
+		singletonLock.Unlock()
 	}
-	return cacheManager
+	return singleton
 }
