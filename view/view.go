@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/Simbory/mego"
-	"github.com/Simbory/mego/watcher"
 	"html/template"
 	"io/ioutil"
 	"os"
@@ -13,6 +11,9 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/Simbory/mego"
+	"github.com/Simbory/mego/watcher"
 )
 
 type view struct {
@@ -250,7 +251,7 @@ func (vc *viewContainer) renderView(viewPath string, viewData interface{}) ([]by
 
 var (
 	viewSingleton = &viewContainer{
-		viewExt:     ".html",
+		viewExt:     ".gohtml",
 		initialized: false,
 	}
 	featuredViewDir = defaultViewDir()
@@ -292,6 +293,7 @@ func init() {
 	})
 }
 
+// UseView use mego view component
 func UseView(dir string) {
 	mego.AssertNotLock()
 	if len(dir) > 0 {
@@ -300,6 +302,7 @@ func UseView(dir string) {
 	AddViewFunc("include", include)
 }
 
+// SetViewExt the the view file extension. The default view file extension is '.gohtml'
 func SetViewExt(ext string) {
 	mego.AssertNotLock()
 	if len(ext) > 0 {
@@ -310,18 +313,21 @@ func SetViewExt(ext string) {
 	}
 }
 
+// AddViewFunc add view function to the view engine
 func AddViewFunc(name string, f interface{}) {
 	mego.AssertNotLock()
 	viewSingleton.addViewFunc(name, f)
 }
 
+// View render the view file and return the mego result
 func View(viewPath string, data interface{}) mego.Result {
 	return &viewResult{
-		data:data,
+		data:     data,
 		viewName: viewPath,
 	}
 }
 
+// Render render the view file aned return the byte array
 func Render(viewName string, data interface{}) ([]byte, error) {
 	if !viewSingleton.initialized {
 		return nil, errors.New("Cannot call this function before it is initialized")

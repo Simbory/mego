@@ -129,6 +129,7 @@ func NewResult() *ContentResult {
 	}
 }
 
+// Content generate the mego content result
 func Content(data interface{}, cntType string) Result {
 	var resp = NewResult()
 	if len(cntType) < 1 {
@@ -149,38 +150,44 @@ func Content(data interface{}, cntType string) Result {
 	return resp
 }
 
+// PlainText generate the mego result as plain text
 func PlainText(content string) Result {
 	return Content(content, "text/plain")
 }
 
+// Javascript generate the mego result as javascript code
 func Javascript(code string) Result {
 	return Content(code, "text/javascript")
 }
 
+// CSS generate the mego result as CSS code
 func CSS(code string) Result {
 	return Content(code, "text/css")
 }
 
+// JSON generate the mego result as JSON string
 func JSON(data interface{}) Result {
-	dataJson, err := json.Marshal(data)
+	dataJSON, err := json.Marshal(data)
 	if err != nil {
 		panic(err)
 	}
-	return Content(byte2Str(dataJson), "application/json")
+	return Content(byte2Str(dataJSON), "application/json")
 }
 
+// JSONP generate the mego result as jsonp string
 func JSONP(data interface{}, callback string) Result {
 	reg := regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
 	if !reg.Match(str2Byte(callback)) {
 		panic(fmt.Errorf("Invalid JSONP callback name %s", callback))
 	}
-	dataJson, err := json.Marshal(data)
+	dataJSON, err := json.Marshal(data)
 	if err != nil {
 		panic(err)
 	}
-	return Content(strAdd(callback, "(", byte2Str(dataJson), ");"), "text/javascript")
+	return Content(strAdd(callback, "(", byte2Str(dataJSON), ");"), "text/javascript")
 }
 
+// XML generate the mego result as XML string
 func XML(data interface{}) Result {
 	xmlBytes, err := xml.Marshal(data)
 	if err != nil {
@@ -189,6 +196,7 @@ func XML(data interface{}) Result {
 	return Content(byte2Str(xmlBytes), "text/xml")
 }
 
+// File generate the mego result as file result
 func File(path string, cntType string) Result {
 	var resp = &FileResult{
 		FilePath:    path,
@@ -205,10 +213,12 @@ func redirect(url string, statusCode int) *RedirectResult {
 	return resp
 }
 
+// Redirect redirect as 302 status code
 func Redirect(url string) Result {
 	return redirect(url, 302)
 }
 
+// RedirectPermanent redirect as 301 status
 func RedirectPermanent(url string) Result {
 	return redirect(url, 301)
 }
