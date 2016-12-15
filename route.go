@@ -30,10 +30,10 @@ var (
 	wordReg = regexp.MustCompile("^[\\w]+")
 )
 
-// HandlerFunc the route handler function
+// ReqHandler the route handler function
 type ReqHandler func(ctx *Context) interface{}
 
-// ValidationFunc define the route check function
+// RouteFunc define the route check function
 type RouteFunc func(urlPath string, opt RouteOpt) string
 
 type pathType uint8
@@ -266,7 +266,7 @@ func (tree *routeTree) addFunc(name string, fun RouteFunc) error {
 		return errors.New("The parameter 'fun' cannot be nil")
 	}
 	if _, ok := tree.funcMap[name]; ok {
-		return fmt.Errorf("The '%s' function is already exist.", name)
+		return fmt.Errorf("the '%s' function is already exist", name)
 	}
 	tree.funcMap[name] = fun
 	return nil

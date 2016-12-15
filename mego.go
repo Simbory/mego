@@ -10,21 +10,24 @@ import (
 	"strings"
 )
 
+// Error500Handler define the internal server error handler func
+type Error500Handler func(http.ResponseWriter, *http.Request, interface{})
+
 var (
-	locked                                                                = false
-	routing                                                               = newRouteTree()
-	initEvents                                                            = []func(){}
-	staticDirs                                                            = make(map[string]http.Handler)
-	staticFiles                                                           = make(map[string]string)
-	notFoundHandler http.HandlerFunc                                      = handle404
-	intErrorHandler func(http.ResponseWriter, *http.Request, interface{}) = handle500
-	filters                                                               = make(filterContainer)
+	locked                           = false
+	routing                          = newRouteTree()
+	initEvents                       = []func(){}
+	staticDirs                       = make(map[string]http.Handler)
+	staticFiles                      = make(map[string]string)
+	notFoundHandler http.HandlerFunc = handle404
+	intErrorHandler Error500Handler  = handle500
+	filters                          = make(filterContainer)
 )
 
 // AssertNotLock make sure the server is not running and the function Run/RunTLS is not called.
 func AssertNotLock() {
 	if locked {
-		panic(errors.New("Cannot call this function while the server is runing."))
+		panic(errors.New("cannot call this function while the server is runing"))
 	}
 }
 
@@ -64,7 +67,7 @@ func OnStart(h func()) {
 	}
 }
 
-// AddFunc add route validation func
+// AddRouteFunc add route validation func
 func AddRouteFunc(name string, fun RouteFunc) {
 	AssertNotLock()
 	reg := regexp.MustCompile("^[a-zA-Z_][\\w]*$")
@@ -74,46 +77,55 @@ func AddRouteFunc(name string, fun RouteFunc) {
 	routing.addFunc(name, fun)
 }
 
+// Get used to register route for GET method
 func Get(routePath string, handler ReqHandler) {
 	AssertNotLock()
 	routing.addRoute("GET", routePath, handler)
 }
 
+// Post used to register route for POST method
 func Post(routePath string, handler ReqHandler) {
 	AssertNotLock()
 	routing.addRoute("POST", routePath, handler)
 }
 
+// Put used to register route for PUT method
 func Put(routePath string, handler ReqHandler) {
 	AssertNotLock()
 	routing.addRoute("PUT", routePath, handler)
 }
 
+// Options used to register route for OPTIONS method
 func Options(routePath string, handler ReqHandler) {
 	AssertNotLock()
 	routing.addRoute("OPTIONS", routePath, handler)
 }
 
+// Head used to register route for HEAD method
 func Head(routePath string, handler ReqHandler) {
 	AssertNotLock()
 	routing.addRoute("HEAD", routePath, handler)
 }
 
+// Delete used to register route for DELETE method
 func Delete(routePath string, handler ReqHandler) {
 	AssertNotLock()
 	routing.addRoute("DELETE", routePath, handler)
 }
 
+// Trace used to register route for TRACE method
 func Trace(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("RACE", routePath, handler)
+	routing.addRoute("TRACE", routePath, handler)
 }
 
+// Connect used to register route for CONNECT method
 func Connect(routePath string, handler ReqHandler) {
 	AssertNotLock()
 	routing.addRoute("CONNECT", routePath, handler)
 }
 
+// Any used to register route for all methods
 func Any(routePath string, handler ReqHandler) {
 	AssertNotLock()
 	routing.addRoute("*", routePath, handler)
@@ -137,7 +149,7 @@ func HandleStaticDir(pathPrefix, dirPath string) {
 	staticDirs[pathPrefix] = http.FileServer(http.Dir(dirPath))
 }
 
-// handle static file
+// HandleStaticFile handle the url as static file
 func HandleStaticFile(url, filePath string) {
 	AssertNotLock()
 	staticFiles[url] = filePath

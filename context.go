@@ -48,7 +48,7 @@ func (c *Context) GetItem(key string) interface{} {
 	return c.items[key]
 }
 
-// DelIem delete context item from mego context by key
+// DelItem delete context item from mego context by key
 func (c *Context) DelItem(key string) {
 	if c.items == nil {
 		return
