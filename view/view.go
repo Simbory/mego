@@ -297,7 +297,7 @@ func init() {
 func UseView(dir string) {
 	mego.AssertNotLock()
 	if len(dir) > 0 {
-		featuredViewDir = dirSlash(dir)
+		featuredViewDir = fixPath(dirSlash(dir))
 	}
 	AddViewFunc("include", include)
 }

@@ -329,7 +329,7 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 							return
 						}
 						data := validateFunc(validationStr, opt)
-						if len(data) == 0 || len(data) > len(validationStr) {
+						if len(data) == 0 || !strings.HasPrefix(validationStr, data) {
 							return
 						}
 						routeData[paramName] = data
