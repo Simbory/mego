@@ -21,6 +21,7 @@ var (
 	filters                                                               = make(filterContainer)
 )
 
+// AssertNotLock make sure the server is not running and the function Run/RunTLS is not called.
 func AssertNotLock() {
 	if locked {
 		panic(errors.New("Cannot call this function while the server is runing."))
@@ -55,6 +56,7 @@ func initMego() {
 	}
 }
 
+// OnStart add a handler to the server start event
 func OnStart(h func()) {
 	AssertNotLock()
 	if h != nil {
@@ -117,6 +119,7 @@ func Any(routePath string, handler ReqHandler) {
 	routing.addRoute("*", routePath, handler)
 }
 
+// HandleStaticDir handle static directory
 func HandleStaticDir(pathPrefix, dirPath string) {
 	AssertNotLock()
 	if len(pathPrefix) == 0 {
@@ -134,11 +137,13 @@ func HandleStaticDir(pathPrefix, dirPath string) {
 	staticDirs[pathPrefix] = http.FileServer(http.Dir(dirPath))
 }
 
+// handle static file
 func HandleStaticFile(url, filePath string) {
 	AssertNotLock()
 	staticFiles[url] = filePath
 }
 
+// Handle404 handle error 404
 func Handle404(h http.HandlerFunc) {
 	AssertNotLock()
 	if h != nil {
@@ -146,6 +151,7 @@ func Handle404(h http.HandlerFunc) {
 	}
 }
 
+// Handle500 handle error 500
 func Handle500(h func(http.ResponseWriter, *http.Request, interface{})) {
 	AssertNotLock()
 	if h != nil {
@@ -153,6 +159,7 @@ func Handle500(h func(http.ResponseWriter, *http.Request, interface{})) {
 	}
 }
 
+// Filter set path filter
 func Filter(pathPrefix string, h func(*Context)) {
 	AssertNotLock()
 	if len(pathPrefix) == 0 {
@@ -170,6 +177,7 @@ func Filter(pathPrefix string, h func(*Context)) {
 	filters.add(pathPrefix, h)
 }
 
+// Run run the application as http
 func Run(addr string) {
 	initMego()
 	svr := &server{}
@@ -179,6 +187,7 @@ func Run(addr string) {
 	}
 }
 
+// RunTLS run the application as https
 func RunTLS(addr, certFile, keyFile string) {
 	initMego()
 	svr := &server{}

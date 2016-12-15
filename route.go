@@ -38,7 +38,7 @@ type RouteFunc func(urlPath string, opt RouteOpt) string
 
 type pathType uint8
 
-// RouteOption the route option struct
+// RouteOpt the route option struct
 type RouteOpt interface {
 	Validation() string
 	HasDefaultValue() bool
