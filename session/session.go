@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	sessionProvides = make(map[string]SessionProvider)
+	providers = make(map[string]SessionProvider)
 )
 
 var manager *SessionManager
@@ -25,7 +25,7 @@ func init() {
 			config.ManagerName = "memory"
 		}
 		if len(config.CookieName) == 0 {
-			config.CookieName = "mego.SessionID"
+			config.CookieName = "mego.ID"
 		}
 		if config.GcLifetime == 0 {
 			config.GcLifetime = 3600
@@ -34,7 +34,7 @@ func init() {
 			config.MaxLifetime = 3600
 		}
 		if config.ManagerName == "memory" {
-			sessionProvides["memory"] = &memSessionProvider{list: list.New(), sessions: make(map[string]*list.Element)}
+			providers["memory"] = &memSessionProvider{list: list.New(), sessions: make(map[string]*list.Element)}
 		}
 		m, err := newSessionManager(config.ManagerName, config)
 		if err != nil {
@@ -50,10 +50,10 @@ func RegSessionProvider(name string, provider SessionProvider) {
 	if provider == nil {
 		panic(errors.New("The parameter 'provider' canot be nil"))
 	}
-	if _, dup := sessionProvides[name]; dup {
+	if _, dup := providers[name]; dup {
 		panic(errors.New("session: Register called twice for provider " + name))
 	}
-	sessionProvides[name] = provider
+	providers[name] = provider
 }
 
 func UseSession(sessionConfig *SessionConfig) {
@@ -61,7 +61,7 @@ func UseSession(sessionConfig *SessionConfig) {
 	if sessionConfig == nil {
 		sessionConfig = &SessionConfig{
 			ManagerName:     "memory",
-			CookieName:      "mego.SessionID",
+			CookieName:      "mego.ID",
 			EnableSetCookie: true,
 			GcLifetime:      3600,
 			MaxLifetime:     3600,
@@ -71,24 +71,24 @@ func UseSession(sessionConfig *SessionConfig) {
 	config = sessionConfig
 }
 
-// SessionStart generate or read the session id from http request.
-// if session id exists, return SessionStore with this id.
-func SessionStart(ctx *mego.Context) SessionStore {
+// Start generate or read the session id from http request.
+// if session id exists, return Store with this id.
+func Start(ctx *mego.Context) Store {
 	r := ctx.Request()
 	w := ctx.Response()
-	sessionID, err := manager.getSessionID(r)
+	id, err := manager.getSessionID(r)
 	if err != nil {
 		return nil
 	}
-	if sessionID != "" && manager.provider.SessionExist(sessionID) {
-		return manager.provider.SessionRead(sessionID)
+	if id != "" && manager.provider.SessionExist(id) {
+		return manager.provider.SessionRead(id)
 	}
-	// Generate a new session
-	sessionID = newSessionId().string()
-	session := manager.provider.SessionRead(sessionID)
+	// Generate a new store
+	id = newSessionId().string()
+	store := manager.provider.SessionRead(id)
 	cookie := &http.Cookie{
 		Name:     manager.config.CookieName,
-		Value:    url.QueryEscape(sessionID),
+		Value:    url.QueryEscape(id),
 		Path:     "/",
 		HttpOnly: manager.config.HTTPOnly,
 		Secure:   manager.isSecure(r),
@@ -104,11 +104,11 @@ func SessionStart(ctx *mego.Context) SessionStore {
 		http.SetCookie(w, cookie)
 	}
 	r.AddCookie(cookie)
-	return session
+	return store
 }
 
-// SessionDestroy Destroy session by its id in http request cookie.
-func SessionDestroy(ctx *mego.Context) {
+// Destroy Destroy session by its id in http request cookie.
+func Destroy(ctx *mego.Context) {
 	r := ctx.Request()
 	w := ctx.Response()
 	cookie, err := r.Cookie(manager.config.CookieName)
@@ -130,8 +130,8 @@ func SessionDestroy(ctx *mego.Context) {
 	}
 }
 
-// SessionRegenerateID Regenerate a session id for this SessionStore who's id is saving in http request.
-func SessionRegenerateID(ctx *mego.Context) (session SessionStore) {
+// RegenerateID Regenerate a session id for this Store who's id is saving in http request.
+func RegenerateID(ctx *mego.Context) (session Store) {
 	r := ctx.Request()
 	w := ctx.Response()
 	sid := newSessionId().string()

@@ -7,12 +7,12 @@ import (
 )
 
 // SessionProvider contains global session methods and saved SessionStores.
-// it can operate a SessionStore by its id.
+// it can operate a Store by its id.
 type SessionProvider interface {
 	SessionInit(gcLifetime int64, config string) error
-	SessionRead(sid string) SessionStore
+	SessionRead(sid string) Store
 	SessionExist(sid string) bool
-	SessionRegenerate(oldSid, sid string) (SessionStore, error)
+	SessionRegenerate(oldSid, sid string) (Store, error)
 	SessionDestroy(sid string) error
 	SessionAll() int //get all active session
 	SessionGC()
@@ -35,7 +35,7 @@ func (prov *memSessionProvider) SessionInit(maxLifeTime int64, savePath string) 
 }
 
 // SessionRead get memory session store by sid
-func (prov *memSessionProvider) SessionRead(sid string) SessionStore {
+func (prov *memSessionProvider) SessionRead(sid string) Store {
 	prov.lock.RLock()
 	if element, ok := prov.sessions[sid]; ok {
 		go prov.SessionUpdate(sid)
@@ -62,7 +62,7 @@ func (prov *memSessionProvider) SessionExist(sid string) bool {
 }
 
 // SessionRegenerate generate new sid for session store in memory session
-func (prov *memSessionProvider) SessionRegenerate(oldsid, sid string) (SessionStore, error) {
+func (prov *memSessionProvider) SessionRegenerate(oldsid, sid string) (Store, error) {
 	prov.lock.RLock()
 	if element, ok := prov.sessions[oldsid]; ok {
 		go prov.SessionUpdate(oldsid)
@@ -83,7 +83,7 @@ func (prov *memSessionProvider) SessionRegenerate(oldsid, sid string) (SessionSt
 	return newStore, nil
 }
 
-// SessionDestroy delete session store in memory session by id
+// Destroy delete session store in memory session by id
 func (prov *memSessionProvider) SessionDestroy(sid string) error {
 	prov.lock.Lock()
 	defer prov.lock.Unlock()

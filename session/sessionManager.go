@@ -49,8 +49,8 @@ func (manager *SessionManager) isSecure(req *http.Request) bool {
 	return true
 }
 
-// GetSessionStore Get SessionStore by its id.
-func (manager *SessionManager) GetSessionStore(sid string) (sessions SessionStore) {
+// GetSessionStore Get Store by its id.
+func (manager *SessionManager) GetSessionStore(sid string) (sessions Store) {
 	sessions = manager.provider.SessionRead(sid)
 	return
 }
@@ -63,7 +63,7 @@ func (manager *SessionManager) GC() {
 }
 
 func newSessionManager(provideName string, config *SessionConfig) (*SessionManager, error) {
-	provider, ok := sessionProvides[provideName]
+	provider, ok := providers[provideName]
 	if !ok {
 		return nil, fmt.Errorf("session: unknown provide %q (forgotten import?)", provideName)
 	}

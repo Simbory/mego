@@ -7,20 +7,20 @@ import (
 	"sync"
 )
 
-// WatcherHandler the watcher handler interface
-type WatcherHandler interface {
+// Handler the watcher handler interface
+type Handler interface {
 	CanHandle(path string) bool
 	Handle(ev *fsnotify.Event)
 }
 
-// WatcherErrorHandler the fsnotify error handler
-type WatcherErrorHandler func(error)
+// ErrorHandler the fsnotify error handler
+type ErrorHandler func(error)
 
 // FileWatcher the file watcher struct
 type FileWatcher struct {
 	watcher        *fsnotify.Watcher
-	handlers       []WatcherHandler
-	errorProcessor WatcherErrorHandler
+	handlers       []Handler
+	errorProcessor ErrorHandler
 	started        bool
 }
 
@@ -35,7 +35,7 @@ func (fw *FileWatcher) RemoveWatch(strFile string) error {
 }
 
 // AddHandler add file watcher handler
-func (fw *FileWatcher) AddHandler(handler WatcherHandler) error {
+func (fw *FileWatcher) AddHandler(handler Handler) error {
 	if handler == nil {
 		return errors.New("The parameter 'handler' cannot be nil")
 	}
@@ -44,7 +44,7 @@ func (fw *FileWatcher) AddHandler(handler WatcherHandler) error {
 }
 
 // SetErrorHandler set the fsnotify error handler
-func (fw *FileWatcher) SetErrorHandler(h WatcherErrorHandler) {
+func (fw *FileWatcher) SetErrorHandler(h ErrorHandler) {
 	fw.errorProcessor = h
 }
 

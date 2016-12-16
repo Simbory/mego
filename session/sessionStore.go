@@ -6,14 +6,14 @@ import (
 	"time"
 )
 
-// SessionStore the session store interface
-type SessionStore interface {
-	Set(key, value interface{}) error     //set session value
-	Get(key interface{}) interface{}      //get session value
-	Delete(key interface{}) error         //delete session value
-	SessionID() string                    //back current sessionID
-	SessionRelease(w http.ResponseWriter) // release the resource & save data to provider & return the data
-	Flush() error                         //delete all data
+// Store the session store interface
+type Store interface {
+	Set(key, value interface{}) error //set session value
+	Get(key interface{}) interface{}  //get session value
+	Delete(key interface{}) error     //delete session value
+	ID() string                       //back current sessionID
+	Release(w http.ResponseWriter)    // release the resource & save data to provider & return the data
+	Flush() error                     //delete all data
 }
 
 // MemSessionStore memory session store.
@@ -59,11 +59,11 @@ func (st *MemSessionStore) Flush() error {
 	return nil
 }
 
-// SessionID get this id of memory session store
+// ID get this id of memory session store
 func (st *MemSessionStore) SessionID() string {
 	return st.sid
 }
 
-// SessionRelease Implement method, no used.
+// Release Implement method, no used.
 func (st *MemSessionStore) SessionRelease(w http.ResponseWriter) {
 }

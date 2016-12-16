@@ -11,9 +11,9 @@ import (
 	"strings"
 )
 
-type sessionUUID [16]byte
+type sUUID [16]byte
 
-func (id sessionUUID) string() string {
+func (id sUUID) string() string {
 	bytes := [16]byte(id)
 	str := fmt.Sprintf("%x%x%x%x%x", bytes[0:4], bytes[4:6], bytes[6:8], bytes[8:10], bytes[10:16])
 	return strings.ToUpper(str)
@@ -25,21 +25,21 @@ func md5Bytes(s string) []byte {
 	return h.Sum(nil)
 }
 
-func uuidRandBytes() sessionUUID {
+func uuidRandBytes() sUUID {
 	b := make([]byte, 48)
 	if _, err := io.ReadFull(rand.Reader, b); err != nil {
-		return sessionUUID{0}
+		return sUUID{0}
 	}
 	bytes := md5Bytes(base64.URLEncoding.EncodeToString(b))
 	if len(bytes) != 16 {
-		return sessionUUID{0}
+		return sUUID{0}
 	}
 	var uuidBytes [16]byte
 	copy(uuidBytes[:], bytes)
-	return sessionUUID(uuidBytes)
+	return sUUID(uuidBytes)
 }
 
-func newSessionId() sessionUUID {
+func newSessionId() sUUID {
 	if runtime.GOOS == "windows" {
 		uuid := uuidRandBytes()
 		return uuid
@@ -55,7 +55,7 @@ func newSessionId() sessionUUID {
 	if err != nil || len(b) != 16 {
 		return uuidRandBytes()
 	}
-	uuid := sessionUUID{}
+	uuid := sUUID{}
 	copy(uuid[:], b)
 	return uuid
 }

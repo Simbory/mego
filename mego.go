@@ -183,10 +183,17 @@ func Filter(pathPrefix string, h func(*Context)) {
 	if !strings.HasPrefix(pathPrefix, "/") {
 		pathPrefix = "/" + pathPrefix
 	}
-	if !strings.HasSuffix(pathPrefix, "/") {
-		pathPrefix = pathPrefix + "/"
+	var matchAll bool
+	if strings.HasSuffix(pathPrefix, "*") {
+		matchAll = true
+		pathPrefix = strings.TrimRight(pathPrefix ,"*")
+		if !strings.HasSuffix(pathPrefix, "/") {
+			pathPrefix = pathPrefix + "/"
+		}
+	} else {
+		matchAll = false
 	}
-	filters.add(pathPrefix, h)
+	filters.add(pathPrefix, matchAll, h)
 }
 
 // Run run the application as http

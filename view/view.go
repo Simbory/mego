@@ -275,9 +275,12 @@ func viewDir() string {
 func init() {
 	mego.OnStart(func() {
 		dir := viewDir()
-		stat, err := os.Stat(dir)
-		if err != nil || !stat.IsDir() {
-			return
+		stat,err := os.Stat(dir)
+		if err != nil {
+			panic(err)
+		}
+		if !stat.IsDir() {
+			panic(fmt.Errorf("the view directory does not exists: %s", dir))
 		}
 		fsWatcher := watcher.Singleton()
 		fsWatcher.AddHandler(&fsViewHandler{fsWatcher})
