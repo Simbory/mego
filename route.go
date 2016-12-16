@@ -444,12 +444,12 @@ func (tree *routeTree) lookup(urlPath string) (map[string]ReqHandler, map[string
 	return nil, nil, nil
 }
 
-func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) {
+func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) error {
 	if len(routePath) == 0 {
-		panic(errors.New("'routePath' param cannot be empty"))
+		return errors.New("'routePath' param cannot be empty")
 	}
 	if handler == nil {
-		panic(errors.New("'handler' param cannot be nil"))
+		return errors.New("'handler' param cannot be nil")
 	}
 	if routePath == "/" {
 		if tree.handlers == nil {
@@ -459,15 +459,16 @@ func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) {
 		} else {
 			tree.handlers[strings.ToUpper(method)] = handler
 		}
-		return
+		return nil
 	}
 	branch, err := newRouteNode(routePath, method, handler)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if err = tree.addChild(branch); err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
 func newRouteTree() *routeTree {
@@ -493,7 +494,7 @@ func isA2Z(c byte) bool {
 }
 
 func isNumber(c byte) bool {
-	return (c >= '0' && c <= '9')
+	return c >= '0' && c <= '9'
 }
 
 func splitURLPath(urlPath string) ([]string, error) {

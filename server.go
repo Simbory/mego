@@ -16,7 +16,11 @@ func (server *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if rec == nil {
 			return
 		}
-		intErrorHandler(w, r, rec)
+		err500Handler(w, r, rec)
+		rec1 := recover()
+		if rec1 != nil {
+			handle500(w, r, rec)
+		}
 	}()
 	var result interface{}
 	if len(staticFiles) > 0 {
@@ -72,7 +76,7 @@ func (server *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if result != nil {
 		server.flush(w, r, result)
 	} else {
-		notFoundHandler(w, r)
+		err404Handler(w, r)
 	}
 }
 

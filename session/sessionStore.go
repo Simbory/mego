@@ -60,10 +60,10 @@ func (st *MemSessionStore) Flush() error {
 }
 
 // ID get this id of memory session store
-func (st *MemSessionStore) SessionID() string {
+func (st *MemSessionStore) ID() string {
 	return st.sid
 }
 
 // Release Implement method, no used.
-func (st *MemSessionStore) SessionRelease(w http.ResponseWriter) {
+func (st *MemSessionStore) Release(w http.ResponseWriter) {
 }
