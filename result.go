@@ -152,17 +152,17 @@ func Content(data interface{}, cntType string) Result {
 
 // PlainText generate the mego result as plain text
 func PlainText(content string) Result {
-	return Content(content, "text/plain")
+	return Content(content, "text/plain; charset=utf-8")
 }
 
 // Javascript generate the mego result as javascript code
 func Javascript(code string) Result {
-	return Content(code, "text/javascript")
+	return Content(code, "text/javascript; charset=utf-8")
 }
 
 // CSS generate the mego result as CSS code
 func CSS(code string) Result {
-	return Content(code, "text/css")
+	return Content(code, "text/css; charset=utf-8")
 }
 
 // JSON generate the mego result as JSON string
@@ -171,7 +171,7 @@ func JSON(data interface{}) Result {
 	if err != nil {
 		panic(err)
 	}
-	return Content(byte2Str(dataJSON), "application/json")
+	return Content(byte2Str(dataJSON), "application/json; charset=utf-8")
 }
 
 // JSONP generate the mego result as jsonp string
@@ -184,7 +184,7 @@ func JSONP(data interface{}, callback string) Result {
 	if err != nil {
 		panic(err)
 	}
-	return Content(strAdd(callback, "(", byte2Str(dataJSON), ");"), "text/javascript")
+	return Content(strAdd(callback, "(", byte2Str(dataJSON), ");"), "text/javascript; charset=utf-8")
 }
 
 // XML generate the mego result as XML string
@@ -193,7 +193,7 @@ func XML(data interface{}) Result {
 	if err != nil {
 		panic(err)
 	}
-	return Content(byte2Str(xmlBytes), "text/xml")
+	return Content(byte2Str(xmlBytes), "text/xml; charset=utf-8")
 }
 
 // File generate the mego result as file result

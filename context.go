@@ -1,6 +1,10 @@
 package mego
 
-import "net/http"
+import (
+	"net/http"
+	"strconv"
+	"strings"
+)
 
 // Context the mego context struct
 type Context struct {
@@ -21,12 +25,60 @@ func (c *Context) Response() http.ResponseWriter {
 	return c.res
 }
 
-// RouteParam find the route parameter by key
-func (c *Context) RouteParam(key string) string {
+// RouteParamString get the route parameter value as string by key
+func (c *Context) RouteParamString(key string) string {
 	if c.routeData == nil {
 		return ""
 	}
 	return c.routeData[key]
+}
+
+// RouteParamInt get the route parameter value as int64 by key
+func (c *Context) RouteParamInt(key string) int64 {
+	var rawValue = c.RouteParamString(key)
+	if len(rawValue) == 0 {
+		return 0
+	}
+	value,err := strconv.ParseInt(rawValue, 0, 64)
+	if err != nil {
+		return 0
+	}
+	return value
+}
+
+// RouteParamUint get the route parameter value as uint64 by key
+func (c *Context) RouteParamUint(key string) uint64 {
+	var rawValue = c.RouteParamString(key)
+	if len(rawValue) == 0 {
+		return 0
+	}
+	value,err := strconv.ParseUint(rawValue, 0, 64)
+	if err != nil {
+		return 0
+	}
+	return value
+}
+
+// RouteParamFloat get the route parameter value as float by key
+func (c *Context) RouteParamFloat(key string) float64 {
+	var rawValue = c.RouteParamString(key)
+	if len(rawValue) == 0 {
+		return 0
+	}
+	value,err := strconv.ParseFloat(rawValue, 64)
+	if err != nil {
+		return 0
+	}
+	return value
+}
+
+// RouteParamBool get the route parameter value as boolean by key
+func (c *Context) RouteParamBool(key string) bool {
+	var rawValue = c.RouteParamString(key)
+	if len(rawValue) == 0 || strings.ToLower(rawValue) == "false" || rawValue == "0"  {
+		return false
+	}
+	return true
 }
 
 // SetItem add context data to mego context

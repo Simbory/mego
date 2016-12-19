@@ -1,7 +1,6 @@
 package view
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"html/template"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/Simbory/mego"
 	"github.com/Simbory/mego/watcher"
+	"io"
 )
 
 type view struct {
@@ -224,33 +224,32 @@ func (vc *viewContainer) compileViews() error {
 	return nil
 }
 
-func (vc *viewContainer) renderView(viewPath string, viewData interface{}) ([]byte, error) {
+func (vc *viewContainer) renderView(writer io.Writer, viewPath string, viewData interface{}) error {
 	if len(viewPath) < 1 {
-		return nil, errors.New("The parameger 'viewPath' cannot be empty")
+		return errors.New("The parameger 'viewPath' cannot be empty")
 	}
 	if !strings.HasSuffix(viewPath, vc.viewExt) {
 		viewPath = viewPath + vc.viewExt
 	}
 	tpl := vc.getView(viewPath)
 	if tpl == nil {
-		return nil, fmt.Errorf("The viewPath '%s' canot be found", viewPath)
+		return fmt.Errorf("The viewPath '%s' canot be found", viewPath)
 	}
 	if tpl.err != nil {
-		return nil, tpl.err
+		return tpl.err
 	}
 	if tpl.tpl == nil {
-		return nil, fmt.Errorf("The viewPath '%s' canot be found", viewPath)
+		return fmt.Errorf("The viewPath '%s' canot be found", viewPath)
 	}
-	buf := &bytes.Buffer{}
-	err := tpl.tpl.Execute(buf, viewData)
+	err := tpl.tpl.Execute(writer, viewData)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return buf.Bytes(), nil
+	return nil
 }
 
 var (
-	viewSingleton = &viewContainer{
+	singleton = &viewContainer{
 		viewExt:     ".gohtml",
 		initialized: false,
 	}
@@ -285,7 +284,7 @@ func init() {
 		fsWatcher := watcher.Singleton()
 		fsWatcher.AddHandler(&fsViewHandler{fsWatcher})
 		fsWatcher.Start()
-		viewSingleton.compileViews()
+		singleton.compileViews()
 		fsWatcher.AddWatch(dir)
 		filepath.Walk(dir, func(p string, info os.FileInfo, er error) error {
 			if info.IsDir() {
@@ -312,14 +311,14 @@ func SetViewExt(ext string) {
 		if !strings.HasPrefix(ext, ".") {
 			ext = "." + ext
 		}
-		viewSingleton.viewExt = ext
+		singleton.viewExt = ext
 	}
 }
 
 // AddViewFunc add view function to the view engine
 func AddViewFunc(name string, f interface{}) {
 	mego.AssertNotLock()
-	viewSingleton.addViewFunc(name, f)
+	singleton.addViewFunc(name, f)
 }
 
 // View render the view file and return the mego result
@@ -330,14 +329,14 @@ func View(viewPath string, data interface{}) mego.Result {
 	}
 }
 
-// Render render the view file aned return the byte array
-func Render(viewName string, data interface{}) ([]byte, error) {
-	if !viewSingleton.initialized {
-		return nil, errors.New("Cannot call this function before it is initialized")
+// Render render the view file and write the result bytes to the writer
+func Render(writer io.Writer, viewName string, data interface{}) error {
+	if !singleton.initialized {
+		return errors.New("Cannot call this function before it is initialized")
 	}
-	resultBytes, err := viewSingleton.renderView(viewName, data)
+	err := singleton.renderView(writer, viewName, data)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return resultBytes, nil
+	return nil
 }

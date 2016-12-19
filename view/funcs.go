@@ -1,11 +1,15 @@
 package view
 
-import "html/template"
+import (
+	"html/template"
+	"bytes"
+)
 
 func include(viewName string, data interface{}) template.HTML {
-	byteData,err :=  viewSingleton.renderView(viewName, data)
+	buf := &bytes.Buffer{}
+	err :=  singleton.renderView(buf, viewName, data)
 	if err != nil {
 		panic(err)
 	}
-	return template.HTML(byteData)
+	return template.HTML(buf.Bytes())
 }
