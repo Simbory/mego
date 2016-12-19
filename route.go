@@ -258,18 +258,17 @@ type routeTree struct {
 	MatchCase bool
 }
 
-func (tree *routeTree) addFunc(name string, fun RouteFunc) error {
+func (tree *routeTree) addFunc(name string, fun RouteFunc) {
 	if len(name) == 0 {
-		return errors.New("The parameter 'name' cannot be empty")
+		panic(errors.New("The parameter 'name' cannot be empty"))
 	}
 	if fun == nil {
-		return errors.New("The parameter 'fun' cannot be nil")
+		panic(errors.New("The parameter 'fun' cannot be nil"))
 	}
 	if _, ok := tree.funcMap[name]; ok {
-		return fmt.Errorf("the '%s' function is already exist", name)
+		panic(fmt.Errorf("the '%s' function is already exist", name))
 	}
 	tree.funcMap[name] = fun
-	return nil
 }
 
 func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlParts []string, endWithSlash bool) (found bool, handler map[string]ReqHandler, routeMap map[string]string) {
@@ -444,12 +443,12 @@ func (tree *routeTree) lookup(urlPath string) (map[string]ReqHandler, map[string
 	return nil, nil, nil
 }
 
-func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) error {
+func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) {
 	if len(routePath) == 0 {
-		return errors.New("'routePath' param cannot be empty")
+		panic(errors.New("'routePath' param cannot be empty"))
 	}
 	if handler == nil {
-		return errors.New("'handler' param cannot be nil")
+		panic(errors.New("'handler' param cannot be nil"))
 	}
 	if routePath == "/" {
 		if tree.handlers == nil {
@@ -459,16 +458,15 @@ func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) er
 		} else {
 			tree.handlers[strings.ToUpper(method)] = handler
 		}
-		return nil
+		return
 	}
 	branch, err := newRouteNode(routePath, method, handler)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	if err = tree.addChild(branch); err != nil {
-		return err
+		panic(err)
 	}
-	return nil
 }
 
 func newRouteTree() *routeTree {

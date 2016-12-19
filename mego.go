@@ -71,74 +71,74 @@ func OnStart(h func()) {
 }
 
 // AddRouteFunc add route validation func
-func AddRouteFunc(name string, fun RouteFunc) error {
+func AddRouteFunc(name string, fun RouteFunc) {
 	AssertNotLock()
 	reg := regexp.MustCompile("^[a-zA-Z_][\\w]*$")
 	if !reg.Match([]byte(name)) {
-		return fmt.Errorf("Invalid route func name: %s", name)
+		panic(fmt.Errorf("Invalid route func name: %s", name))
 	}
-	return routing.addFunc(name, fun)
+	routing.addFunc(name, fun)
 }
 
 // Get used to register router for GET method
-func Get(routePath string, handler ReqHandler) error {
+func Get(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	return routing.addRoute("GET", routePath, handler)
+	routing.addRoute("GET", routePath, handler)
 }
 
 // Post used to register router for POST method
-func Post(routePath string, handler ReqHandler) error {
+func Post(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	return routing.addRoute("POST", routePath, handler)
+	routing.addRoute("POST", routePath, handler)
 }
 
 // Put used to register router for PUT method
-func Put(routePath string, handler ReqHandler) error {
+func Put(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	return routing.addRoute("PUT", routePath, handler)
+	routing.addRoute("PUT", routePath, handler)
 }
 
 // Options used to register router for OPTIONS method
-func Options(routePath string, handler ReqHandler) error {
+func Options(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	return routing.addRoute("OPTIONS", routePath, handler)
+	routing.addRoute("OPTIONS", routePath, handler)
 }
 
 // Head used to register router for HEAD method
-func Head(routePath string, handler ReqHandler) error {
+func Head(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	return routing.addRoute("HEAD", routePath, handler)
+	routing.addRoute("HEAD", routePath, handler)
 }
 
 // Delete used to register router for DELETE method
-func Delete(routePath string, handler ReqHandler) error {
+func Delete(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	return routing.addRoute("DELETE", routePath, handler)
+	routing.addRoute("DELETE", routePath, handler)
 }
 
 // Trace used to register router for TRACE method
-func Trace(routePath string, handler ReqHandler) error {
+func Trace(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	return routing.addRoute("TRACE", routePath, handler)
+	routing.addRoute("TRACE", routePath, handler)
 }
 
 // Connect used to register router for CONNECT method
-func Connect(routePath string, handler ReqHandler) error {
+func Connect(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	return routing.addRoute("CONNECT", routePath, handler)
+	routing.addRoute("CONNECT", routePath, handler)
 }
 
 // Any used to register router for all methods
-func Any(routePath string, handler ReqHandler) error {
+func Any(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	return routing.addRoute("*", routePath, handler)
+	routing.addRoute("*", routePath, handler)
 }
 
 // HandleStaticDir handle static directory
-func HandleStaticDir(pathPrefix, dirPath string) error {
+func HandleStaticDir(pathPrefix, dirPath string) {
 	AssertNotLock()
 	if len(pathPrefix) == 0 {
-		return errors.New("The parameter 'pathPrefix' cannot be empty")
+		panic(errors.New("The parameter 'pathPrefix' cannot be empty"))
 	}
 	if len(dirPath) == 0 {
 		dirPath = "."
@@ -150,7 +150,6 @@ func HandleStaticDir(pathPrefix, dirPath string) error {
 		pathPrefix = pathPrefix + "/"
 	}
 	staticDirs[pathPrefix] = http.FileServer(http.Dir(dirPath))
-	return nil
 }
 
 // HandleStaticFile handle the url as static file
