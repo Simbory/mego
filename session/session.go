@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"github.com/google/uuid"
 )
 
 var (
@@ -25,7 +26,7 @@ func init() {
 			config.ManagerName = "memory"
 		}
 		if len(config.CookieName) == 0 {
-			config.CookieName = "mego.ID"
+			config.CookieName = "MEGO_SESSIONID"
 		}
 		if config.GcLifetime == 0 {
 			config.GcLifetime = 3600
@@ -61,7 +62,7 @@ func UseSession(sessionConfig *SessionConfig) {
 	if sessionConfig == nil {
 		sessionConfig = &SessionConfig{
 			ManagerName:     "memory",
-			CookieName:      "mego.ID",
+			CookieName:      "MEGO_SESSIONID",
 			EnableSetCookie: true,
 			GcLifetime:      3600,
 			MaxLifetime:     3600,
@@ -69,6 +70,11 @@ func UseSession(sessionConfig *SessionConfig) {
 		}
 	}
 	config = sessionConfig
+}
+
+func newSessionId() string {
+	id,_ := uuid.NewUUID()
+	return id.String()
 }
 
 // Start generate or read the session id from http request.
@@ -84,7 +90,7 @@ func Start(ctx *mego.Context) Store {
 		return manager.provider.SessionRead(id)
 	}
 	// Generate a new store
-	id = newSessionId().string()
+	id = newSessionId()
 	store := manager.provider.SessionRead(id)
 	cookie := &http.Cookie{
 		Name:     manager.config.CookieName,
@@ -134,7 +140,7 @@ func Destroy(ctx *mego.Context) {
 func RegenerateID(ctx *mego.Context) (session Store) {
 	r := ctx.Request()
 	w := ctx.Response()
-	sid := newSessionId().string()
+	sid := newSessionId()
 	cookie, err := r.Cookie(manager.config.CookieName)
 	if err != nil || cookie.Value == "" {
 		//delete old cookie
