@@ -5,6 +5,8 @@ import (
 	"unsafe"
 )
 
+const Version = "1.0"
+
 func byte2Str(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
