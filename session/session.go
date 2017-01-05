@@ -18,7 +18,7 @@ var manager *SessionManager
 var config *SessionConfig
 
 func init() {
-	mego.OnStart(func() {
+	mego.OnServerStart(func() {
 		if config == nil {
 			return
 		}

@@ -13,20 +13,11 @@ import (
 // Error500Handler define the internal server error handler func
 type Error500Handler func(http.ResponseWriter, *http.Request, interface{})
 
-var (
-	locked                         = false
-	routing                        = newRouteTree()
-	initEvents                     = []func(){}
-	staticDirs                     = make(map[string]http.Handler)
-	staticFiles                    = make(map[string]string)
-	err404Handler http.HandlerFunc = handle404
-	err500Handler Error500Handler  = handle500
-	filters                        = make(filterContainer)
-)
+var svr = newServer()
 
 // AssertNotLock make sure the function only can be called just before the server is running
 func AssertNotLock() {
-	if locked {
+	if svr.locked {
 		panic(errors.New("cannot call this function while the server is runing"))
 	}
 }
@@ -53,20 +44,11 @@ func handle500(w http.ResponseWriter, r *http.Request, rec interface{}) {
 	w.Write(buf.Bytes())
 }
 
-// init mego server
-func initMego() {
-	if len(initEvents) > 0 {
-		for _, h := range initEvents {
-			h()
-		}
-	}
-}
-
 // OnStart attach an event handler to the server start event
-func OnStart(h func()) {
+func OnServerStart(h func()) {
 	AssertNotLock()
 	if h != nil {
-		initEvents = append(initEvents, h)
+		svr.initEvents = append(svr.initEvents, h)
 	}
 }
 
@@ -77,61 +59,61 @@ func AddRouteFunc(name string, fun RouteFunc) {
 	if !reg.Match([]byte(name)) {
 		panic(fmt.Errorf("Invalid route func name: %s", name))
 	}
-	routing.addFunc(name, fun)
+	svr.routing.addFunc(name, fun)
 }
 
 // Get used to register router for GET method
 func Get(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("GET", routePath, handler)
+	svr.appendRouteSetting("GET", routePath, handler)
 }
 
 // Post used to register router for POST method
 func Post(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("POST", routePath, handler)
+	svr.appendRouteSetting("POST", routePath, handler)
 }
 
 // Put used to register router for PUT method
 func Put(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("PUT", routePath, handler)
+	svr.appendRouteSetting("PUT", routePath, handler)
 }
 
 // Options used to register router for OPTIONS method
 func Options(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("OPTIONS", routePath, handler)
+	svr.appendRouteSetting("OPTIONS", routePath, handler)
 }
 
 // Head used to register router for HEAD method
 func Head(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("HEAD", routePath, handler)
+	svr.appendRouteSetting("HEAD", routePath, handler)
 }
 
 // Delete used to register router for DELETE method
 func Delete(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("DELETE", routePath, handler)
+	svr.appendRouteSetting("DELETE", routePath, handler)
 }
 
 // Trace used to register router for TRACE method
 func Trace(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("TRACE", routePath, handler)
+	svr.appendRouteSetting("TRACE", routePath, handler)
 }
 
 // Connect used to register router for CONNECT method
 func Connect(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("CONNECT", routePath, handler)
+	svr.appendRouteSetting("CONNECT", routePath, handler)
 }
 
 // Any used to register router for all methods
 func Any(routePath string, handler ReqHandler) {
 	AssertNotLock()
-	routing.addRoute("*", routePath, handler)
+	svr.appendRouteSetting("*", routePath, handler)
 }
 
 // HandleStaticDir handle static directory
@@ -149,20 +131,20 @@ func HandleStaticDir(pathPrefix, dirPath string) {
 	if !strings.HasSuffix(pathPrefix, "/") {
 		pathPrefix = pathPrefix + "/"
 	}
-	staticDirs[pathPrefix] = http.FileServer(http.Dir(dirPath))
+	svr.staticDirs[pathPrefix] = http.FileServer(http.Dir(dirPath))
 }
 
 // HandleStaticFile handle the url as static file
 func HandleStaticFile(url, filePath string) {
 	AssertNotLock()
-	staticFiles[url] = filePath
+	svr.staticFiles[url] = filePath
 }
 
 // Handle404 set custom error handler for status code 404
 func Handle404(h http.HandlerFunc) {
 	AssertNotLock()
 	if h != nil {
-		err404Handler = h
+		svr.err404Handler = h
 	}
 }
 
@@ -170,7 +152,7 @@ func Handle404(h http.HandlerFunc) {
 func Handle500(h func(http.ResponseWriter, *http.Request, interface{})) {
 	AssertNotLock()
 	if h != nil {
-		err500Handler = h
+		svr.err500Handler = h
 	}
 }
 
@@ -198,14 +180,13 @@ func Filter(pathPrefix string, h func(*Context)) error {
 	} else {
 		matchAll = false
 	}
-	filters.add(pathPrefix, matchAll, h)
+	svr.filters.add(pathPrefix, matchAll, h)
 	return nil
 }
 
 // Run run the application as http
 func Run(addr string) {
-	initMego()
-	svr := &server{}
+	svr.onInit()
 	err := http.ListenAndServe(addr, svr)
 	if err != nil {
 		panic(err)
@@ -214,8 +195,7 @@ func Run(addr string) {
 
 // RunTLS run the application as https
 func RunTLS(addr, certFile, keyFile string) {
-	initMego()
-	svr := &server{}
+	svr.onInit()
 	err := http.ListenAndServeTLS(addr, certFile, keyFile, svr)
 	if err != nil {
 		panic(err)

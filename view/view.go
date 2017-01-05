@@ -272,7 +272,7 @@ func viewDir() string {
 }
 
 func init() {
-	mego.OnStart(func() {
+	mego.OnServerStart(func() {
 		dir := viewDir()
 		stat,err := os.Stat(dir)
 		if err != nil {

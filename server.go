@@ -8,23 +8,74 @@ import (
 	"strings"
 )
 
-type server struct{}
+type routeSetting struct {
+	method     string
+	routePath  string
+	reqHandler ReqHandler
+}
 
-func (server *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+type server struct {
+	locked        bool
+	routing       *routeTree
+	initEvents    []func()
+	staticDirs    map[string]http.Handler
+	staticFiles   map[string]string
+	err404Handler http.HandlerFunc
+	err500Handler Error500Handler
+	filters       filterContainer
+	routeSettings []*routeSetting
+}
+
+func newServer() *server {
+	var s = &server{
+		locked: false,
+		routing: newRouteTree(),
+		initEvents: []func(){},
+		staticDirs: make(map[string]http.Handler, 10),
+		staticFiles: make(map[string]string, 10),
+		err404Handler: handle404,
+		err500Handler: handle500,
+		filters: make(filterContainer),
+	}
+	return s
+}
+
+func (sv *server)appendRouteSetting(m, p string, h ReqHandler) {
+	sv.routeSettings = append(sv.routeSettings, &routeSetting{
+		method: m,
+		routePath: p,
+		reqHandler: h,
+	})
+}
+
+func (sv *server) onInit() {
+	if len(sv.routeSettings) > 0 {
+		for _, setting := range sv.routeSettings {
+			sv.routing.addRoute(setting.method, setting.routePath, setting.reqHandler)
+		}
+	}
+	if len(sv.initEvents) > 0 {
+		for _, h := range sv.initEvents {
+			h()
+		}
+	}
+}
+
+func (sv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		rec := recover()
 		if rec == nil {
 			return
 		}
-		err500Handler(w, r, rec)
+		sv.err500Handler(w, r, rec)
 		rec1 := recover()
 		if rec1 != nil {
 			handle500(w, r, rec)
 		}
 	}()
 	var result interface{}
-	if len(staticFiles) > 0 {
-		for urlPath, filePath := range staticFiles {
+	if len(sv.staticFiles) > 0 {
+		for urlPath, filePath := range sv.staticFiles {
 			if r.URL.Path == urlPath {
 				result = &FileResult{
 					FilePath: filePath,
@@ -33,12 +84,12 @@ func (server *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if result == nil && len(staticDirs) > 0 {
+	if result == nil && len(sv.staticDirs) > 0 {
 		urlWithSlash := r.URL.Path
 		if !strings.HasSuffix(urlWithSlash, "/") {
 			urlWithSlash = urlWithSlash + "/"
 		}
-		for pathPrefix, h := range staticDirs {
+		for pathPrefix, h := range sv.staticDirs {
 			if strings.HasPrefix(urlWithSlash, pathPrefix) {
 				r.URL.Path = strings.TrimLeft(r.URL.Path, pathPrefix[0:len(pathPrefix)-1])
 				h.ServeHTTP(w, r)
@@ -48,7 +99,7 @@ func (server *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if result == nil {
 		method := strings.ToUpper(r.Method)
-		handlers, routeData, err := routing.lookup(r.URL.Path)
+		handlers, routeData, err := sv.routing.lookup(r.URL.Path)
 		if err != nil {
 			panic(err)
 		}
@@ -66,7 +117,7 @@ func (server *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				res:       w,
 				routeData: routeData,
 			}
-			filters.exec(r.URL.Path, ctx)
+			sv.filters.exec(r.URL.Path, ctx)
 			if ctx.ended {
 				return
 			}
@@ -74,9 +125,9 @@ func (server *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if result != nil {
-		server.flush(w, r, result)
+		sv.flush(w, r, result)
 	} else {
-		err404Handler(w, r)
+		sv.err404Handler(w, r)
 	}
 }
 
