@@ -476,6 +476,7 @@ func newRouteTree() *routeTree {
 			"any":  any,
 			"word": word,
 			"enum": enum,
+			"uuid": uuid,
 		},
 	}
 	node.NodeType = root
@@ -748,6 +749,17 @@ func enum(urlPath string, opt RouteOpt) string {
 		if strings.HasPrefix(urlPath, value) {
 			return value
 		}
+	}
+	return ""
+}
+
+func uuid(urlPath string, opt RouteOpt) string {
+	if len(urlPath) < 36 {
+		return ""
+	}
+	regex := regexp.MustCompile("^[a-fA-F0-9]{8}(-[a-fA-F0-9]{4}){4}[a-fA-F0-9]{8}.*")
+	if regex.MatchString(urlPath) {
+		return urlPath[0:36]
 	}
 	return ""
 }
