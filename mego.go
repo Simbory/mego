@@ -6,9 +6,16 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"path"
 )
 
-var server = newServer()
+var server *webServer
+
+func init() {
+	server = newServer()
+	server.maxFormSize = 32 << 20
+	server.webRoot = WorkingDir()
+}
 
 // AssertUnlocked make sure the function only can be called just before the server is running
 func AssertUnlocked() {
@@ -26,7 +33,7 @@ func OnStart(h func()) {
 // AddRouteFunc add route validation func
 func AddRouteFunc(name string, fun RouteFunc) {
 	AssertUnlocked()
-	reg := regexp.MustCompile("^[a-zA-Z_][\\w]*$")
+	reg := regexp.MustCompile("^[a-zA-Z][\\w]*$")
 	if !reg.Match([]byte(name)) {
 		panic(fmt.Errorf("Invalid route func name: %s", name))
 	}
@@ -96,6 +103,14 @@ func Area(pathPrefix string) *area {
 		panic(errors.New("Invalid pathPrefix:" + pathPrefix))
 	}
 	return &area{"/" + prefix, server}
+}
+
+// MapPath Returns the physical file path that corresponds to the specified virtual path.
+// @param virtualPath: the virtual path starts with
+// @return the absolute file path
+func MapPath(virtualPath string) string {
+	p := path.Join(server.webRoot, virtualPath)
+	return strings.Replace(p, "\\", "/", -1)
 }
 
 // HandleDir handle static directory
