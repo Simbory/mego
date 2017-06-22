@@ -7,7 +7,12 @@ import (
 	"net/url"
 	"mime/multipart"
 	"mime"
+	"github.com/google/uuid"
 )
+
+type sizer interface {
+	Size() int64
+}
 
 // Context the mego context struct
 type Context struct {
@@ -75,6 +80,18 @@ func (ctx *Context) RouteFloat(key string) float64 {
 	return value
 }
 
+func (ctx *Context) RouteUUID(key string) uuid.UUID {
+	var rawValue= ctx.RouteString(key)
+	if len(rawValue) == 0 {
+		return uuid.Nil
+	}
+	value, err := uuid.Parse(rawValue)
+	if err != nil {
+		return uuid.Nil
+	}
+	return value
+}
+
 // RouteBool get the route parameter value as boolean by key
 func (ctx *Context) RouteBool(key string) bool {
 	var rawValue = ctx.RouteString(key)
@@ -92,7 +109,13 @@ func (ctx *Context) PostFile(formName string) *PostFile {
 	if f == nil {
 		return nil
 	}
-	return &PostFile{FileName: h.Filename, Size: h.Size, File: f, Header: h}
+	var size int64
+	if s, ok := f.(sizer); ok {
+		size = s.Size()
+	} else {
+		size = 0
+	}
+	return &PostFile{FileName: h.Filename, Size: size, File: f, Header: h}
 }
 
 // SetItem add context data to mego context
