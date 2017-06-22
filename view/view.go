@@ -250,7 +250,7 @@ func (vc *viewContainer) renderView(writer io.Writer, viewPath string, viewData 
 
 var (
 	singleton = &viewContainer{
-		viewExt:     ".gohtml",
+		viewExt:     ".html",
 		initialized: false,
 	}
 	featuredViewDir = defaultViewDir()
@@ -272,7 +272,7 @@ func viewDir() string {
 }
 
 func init() {
-	mego.OnServerStart(func() {
+	mego.OnStart(func() {
 		dir := viewDir()
 		stat,err := os.Stat(dir)
 		if err != nil {
@@ -297,7 +297,7 @@ func init() {
 
 // UseView use mego view component
 func UseView(dir string) {
-	mego.AssertNotLock()
+	mego.AssertUnlocked()
 	if len(dir) > 0 {
 		featuredViewDir = fixPath(dirSlash(dir))
 	}
@@ -306,7 +306,7 @@ func UseView(dir string) {
 
 // SetViewExt the the view file extension. The default view file extension is '.gohtml'
 func SetViewExt(ext string) {
-	mego.AssertNotLock()
+	mego.AssertUnlocked()
 	if len(ext) > 0 {
 		if !strings.HasPrefix(ext, ".") {
 			ext = "." + ext
@@ -317,7 +317,7 @@ func SetViewExt(ext string) {
 
 // AddViewFunc add view function to the view engine
 func AddViewFunc(name string, f interface{}) {
-	mego.AssertNotLock()
+	mego.AssertUnlocked()
 	singleton.addViewFunc(name, f)
 }
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"errors"
 )
 
 type routeSetting struct {
@@ -14,7 +15,7 @@ type routeSetting struct {
 	reqHandler ReqHandler
 }
 
-type server struct {
+type webServer struct {
 	locked        bool
 	routing       *routeTree
 	initEvents    []func()
@@ -24,10 +25,12 @@ type server struct {
 	err500Handler Error500Handler
 	filters       filterContainer
 	routeSettings []*routeSetting
+	maxFormSize   int64
+	webRoot       string
 }
 
-func newServer() *server {
-	var s = &server{
+func newServer() *webServer {
+	var s = &webServer{
 		locked: false,
 		routing: newRouteTree(),
 		initEvents: []func(){},
@@ -40,42 +43,48 @@ func newServer() *server {
 	return s
 }
 
-func (sv *server)appendRouteSetting(m, p string, h ReqHandler) {
-	sv.routeSettings = append(sv.routeSettings, &routeSetting{
+func (s *webServer) assertUnlocked() {
+	if s.locked {
+		panic(errors.New("The server is locked."))
+	}
+}
+
+func (s *webServer) addRoute(m, p string, h ReqHandler) {
+	s.routeSettings = append(s.routeSettings, &routeSetting{
 		method: m,
 		routePath: p,
 		reqHandler: h,
 	})
 }
 
-func (sv *server) onInit() {
-	if len(sv.routeSettings) > 0 {
-		for _, setting := range sv.routeSettings {
-			sv.routing.addRoute(setting.method, setting.routePath, setting.reqHandler)
+func (s *webServer) onInit() {
+	if len(s.routeSettings) > 0 {
+		for _, setting := range s.routeSettings {
+			s.routing.addRoute(setting.method, setting.routePath, setting.reqHandler)
 		}
 	}
-	if len(sv.initEvents) > 0 {
-		for _, h := range sv.initEvents {
+	if len(s.initEvents) > 0 {
+		for _, h := range s.initEvents {
 			h()
 		}
 	}
 }
 
-func (sv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		rec := recover()
 		if rec == nil {
 			return
 		}
-		sv.err500Handler(w, r, rec)
+		s.err500Handler(w, r, rec)
 		rec1 := recover()
 		if rec1 != nil {
 			handle500(w, r, rec)
 		}
 	}()
 	var result interface{}
-	if len(sv.staticFiles) > 0 {
-		for urlPath, filePath := range sv.staticFiles {
+	if len(s.staticFiles) > 0 {
+		for urlPath, filePath := range s.staticFiles {
 			if r.URL.Path == urlPath {
 				result = &FileResult{
 					FilePath: filePath,
@@ -84,12 +93,12 @@ func (sv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if result == nil && len(sv.staticDirs) > 0 {
+	if result == nil && len(s.staticDirs) > 0 {
 		urlWithSlash := r.URL.Path
 		if !strings.HasSuffix(urlWithSlash, "/") {
 			urlWithSlash = urlWithSlash + "/"
 		}
-		for pathPrefix, h := range sv.staticDirs {
+		for pathPrefix, h := range s.staticDirs {
 			if strings.HasPrefix(urlWithSlash, pathPrefix) {
 				r.URL.Path = strings.TrimLeft(r.URL.Path, pathPrefix[0:len(pathPrefix)-1])
 				h.ServeHTTP(w, r)
@@ -99,7 +108,7 @@ func (sv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if result == nil {
 		method := strings.ToUpper(r.Method)
-		handlers, routeData, err := sv.routing.lookup(r.URL.Path)
+		handlers, routeData, err := s.routing.lookup(r.URL.Path)
 		if err != nil {
 			panic(err)
 		}
@@ -117,7 +126,11 @@ func (sv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				res:       w,
 				routeData: routeData,
 			}
-			sv.filters.exec(r.URL.Path, ctx)
+			err := ctx.parseForm()
+			if err != nil {
+				panic(err)
+			}
+			s.filters.exec(r.URL.Path, ctx)
 			if ctx.ended {
 				return
 			}
@@ -125,13 +138,13 @@ func (sv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if result != nil {
-		sv.flush(w, r, result)
+		s.flush(w, r, result)
 	} else {
-		sv.err404Handler(w, r)
+		s.err404Handler(w, r)
 	}
 }
 
-func (server *server) flush(w http.ResponseWriter, req *http.Request, result interface{}) {
+func (s *webServer) flush(w http.ResponseWriter, req *http.Request, result interface{}) {
 	switch result.(type) {
 	case Result:
 		result.(Result).ExecResult(w, req)

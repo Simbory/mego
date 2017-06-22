@@ -1,124 +1,106 @@
 package mego
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
-	"runtime/debug"
 	"strings"
 )
 
-// Error500Handler define the internal server error handler func
-type Error500Handler func(http.ResponseWriter, *http.Request, interface{})
+var server = newServer()
 
-var svr = newServer()
-
-// AssertNotLock make sure the function only can be called just before the server is running
-func AssertNotLock() {
-	if svr.locked {
-		panic(errors.New("cannot call this function while the server is runing"))
-	}
-}
-
-// handle404 the default error 404 handler
-func handle404(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(404)
-	w.Write([]byte("Error 404: Not Found"))
-}
-
-// handle500 the default error 500 handler
-func handle500(w http.ResponseWriter, r *http.Request, rec interface{}) {
-	w.WriteHeader(500)
-	w.Header().Set("Content-Type", "text-plain")
-	var debugStack = string(debug.Stack())
-	debugStack = strings.Replace(debugStack, "<", "&lt;", -1)
-	debugStack = strings.Replace(debugStack, ">", "&gt;", -1)
-	buf := &bytes.Buffer{}
-	if err, ok := rec.(error); ok {
-		buf.WriteString(err.Error())
-		buf.WriteString("\r\n\r\n")
-	}
-	buf.WriteString(debugStack)
-	w.Write(buf.Bytes())
+// AssertUnlocked make sure the function only can be called just before the server is running
+func AssertUnlocked() {
+	server.assertUnlocked()
 }
 
 // OnStart attach an event handler to the server start event
-func OnServerStart(h func()) {
-	AssertNotLock()
+func OnStart(h func()) {
+	AssertUnlocked()
 	if h != nil {
-		svr.initEvents = append(svr.initEvents, h)
+		server.initEvents = append(server.initEvents, h)
 	}
 }
 
 // AddRouteFunc add route validation func
 func AddRouteFunc(name string, fun RouteFunc) {
-	AssertNotLock()
+	AssertUnlocked()
 	reg := regexp.MustCompile("^[a-zA-Z_][\\w]*$")
 	if !reg.Match([]byte(name)) {
 		panic(fmt.Errorf("Invalid route func name: %s", name))
 	}
-	svr.routing.addFunc(name, fun)
+	server.routing.addFunc(name, fun)
 }
 
 // Get used to register router for GET method
 func Get(routePath string, handler ReqHandler) {
-	AssertNotLock()
-	svr.appendRouteSetting("GET", routePath, handler)
+	AssertUnlocked()
+	server.addRoute("GET", routePath, handler)
 }
 
 // Post used to register router for POST method
 func Post(routePath string, handler ReqHandler) {
-	AssertNotLock()
-	svr.appendRouteSetting("POST", routePath, handler)
+	AssertUnlocked()
+	server.addRoute("POST", routePath, handler)
 }
 
 // Put used to register router for PUT method
 func Put(routePath string, handler ReqHandler) {
-	AssertNotLock()
-	svr.appendRouteSetting("PUT", routePath, handler)
+	AssertUnlocked()
+	server.addRoute("PUT", routePath, handler)
 }
 
 // Options used to register router for OPTIONS method
 func Options(routePath string, handler ReqHandler) {
-	AssertNotLock()
-	svr.appendRouteSetting("OPTIONS", routePath, handler)
+	AssertUnlocked()
+	server.addRoute("OPTIONS", routePath, handler)
 }
 
 // Head used to register router for HEAD method
 func Head(routePath string, handler ReqHandler) {
-	AssertNotLock()
-	svr.appendRouteSetting("HEAD", routePath, handler)
+	AssertUnlocked()
+	server.addRoute("HEAD", routePath, handler)
 }
 
 // Delete used to register router for DELETE method
 func Delete(routePath string, handler ReqHandler) {
-	AssertNotLock()
-	svr.appendRouteSetting("DELETE", routePath, handler)
+	AssertUnlocked()
+	server.addRoute("DELETE", routePath, handler)
 }
 
 // Trace used to register router for TRACE method
 func Trace(routePath string, handler ReqHandler) {
-	AssertNotLock()
-	svr.appendRouteSetting("TRACE", routePath, handler)
+	AssertUnlocked()
+	server.addRoute("TRACE", routePath, handler)
 }
 
 // Connect used to register router for CONNECT method
 func Connect(routePath string, handler ReqHandler) {
-	AssertNotLock()
-	svr.appendRouteSetting("CONNECT", routePath, handler)
+	AssertUnlocked()
+	server.addRoute("CONNECT", routePath, handler)
 }
 
 // Any used to register router for all methods
 func Any(routePath string, handler ReqHandler) {
-	AssertNotLock()
-	svr.appendRouteSetting("*", routePath, handler)
+	AssertUnlocked()
+	server.addRoute("*", routePath, handler)
 }
 
-// HandleStaticDir handle static directory
-func HandleStaticDir(pathPrefix, dirPath string) {
-	AssertNotLock()
+// Area get the mego area
+func Area(pathPrefix string) *area {
+	prefix := strings.Trim(pathPrefix, "/")
+	prefix = strings.Trim(prefix, "\\")
+	reg := regexp.MustCompile("[/a-zA-Z0-9_-]+")
+	if !reg.Match([]byte(prefix)) {
+		panic(errors.New("Invalid pathPrefix:" + pathPrefix))
+	}
+	return &area{"/" + prefix, server}
+}
+
+// HandleDir handle static directory
+func HandleDir(pathPrefix, dirPath string) {
+	AssertUnlocked()
 	if len(pathPrefix) == 0 {
 		panic(errors.New("The parameter 'pathPrefix' cannot be empty"))
 	}
@@ -131,36 +113,36 @@ func HandleStaticDir(pathPrefix, dirPath string) {
 	if !strings.HasSuffix(pathPrefix, "/") {
 		pathPrefix = pathPrefix + "/"
 	}
-	svr.staticDirs[pathPrefix] = http.FileServer(http.Dir(dirPath))
+	server.staticDirs[pathPrefix] = http.FileServer(http.Dir(dirPath))
 }
 
-// HandleStaticFile handle the url as static file
-func HandleStaticFile(url, filePath string) {
-	AssertNotLock()
-	svr.staticFiles[url] = filePath
+// HandleFile handle the url as static file
+func HandleFile(url, filePath string) {
+	AssertUnlocked()
+	server.staticFiles[url] = filePath
 }
 
 // Handle404 set custom error handler for status code 404
 func Handle404(h http.HandlerFunc) {
-	AssertNotLock()
+	AssertUnlocked()
 	if h != nil {
-		svr.err404Handler = h
+		server.err404Handler = h
 	}
 }
 
 // Handle500 set custom error handler for status code 500
 func Handle500(h func(http.ResponseWriter, *http.Request, interface{})) {
-	AssertNotLock()
+	AssertUnlocked()
 	if h != nil {
-		svr.err500Handler = h
+		server.err500Handler = h
 	}
 }
 
-// Filter set path filter
+// HandleFilter handle the path
 // the path prefix ends with char '*', the filter will be available for all urls that
 // starts with pathPrefix. Otherwise, the filter only be available for the featured url
-func Filter(pathPrefix string, h func(*Context)) error {
-	AssertNotLock()
+func HandleFilter(pathPrefix string, h func(*Context)) error {
+	AssertUnlocked()
 	if len(pathPrefix) == 0 {
 		return errors.New("The parameter 'pathPrefix' cannot be empty")
 	}
@@ -180,14 +162,14 @@ func Filter(pathPrefix string, h func(*Context)) error {
 	} else {
 		matchAll = false
 	}
-	svr.filters.add(pathPrefix, matchAll, h)
+	server.filters.add(pathPrefix, matchAll, h)
 	return nil
 }
 
 // Run run the application as http
 func Run(addr string) {
-	svr.onInit()
-	err := http.ListenAndServe(addr, svr)
+	server.onInit()
+	err := http.ListenAndServe(addr, server)
 	if err != nil {
 		panic(err)
 	}
@@ -195,8 +177,8 @@ func Run(addr string) {
 
 // RunTLS run the application as https
 func RunTLS(addr, certFile, keyFile string) {
-	svr.onInit()
-	err := http.ListenAndServeTLS(addr, certFile, keyFile, svr)
+	server.onInit()
+	err := http.ListenAndServeTLS(addr, certFile, keyFile, server)
 	if err != nil {
 		panic(err)
 	}

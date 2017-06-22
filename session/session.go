@@ -18,7 +18,7 @@ var manager *SessionManager
 var config *SessionConfig
 
 func init() {
-	mego.OnServerStart(func() {
+	mego.OnStart(func() {
 		if config == nil {
 			return
 		}
@@ -47,7 +47,7 @@ func init() {
 }
 
 func RegSessionProvider(name string, provider SessionProvider) {
-	mego.AssertNotLock()
+	mego.AssertUnlocked()
 	if provider == nil {
 		panic(errors.New("The parameter 'provider' canot be nil"))
 	}
@@ -58,7 +58,7 @@ func RegSessionProvider(name string, provider SessionProvider) {
 }
 
 func UseSession(sessionConfig *SessionConfig) {
-	mego.AssertNotLock()
+	mego.AssertUnlocked()
 	if sessionConfig == nil {
 		sessionConfig = &SessionConfig{
 			ManagerName:     "memory",
