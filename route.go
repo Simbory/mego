@@ -476,7 +476,7 @@ func newRouteTree() *routeTree {
 			"any":  any,
 			"word": word,
 			"enum": enum,
-			"uuid": uuid,
+			"uuid": checkUuid,
 		},
 	}
 	node.NodeType = root
@@ -753,7 +753,7 @@ func enum(urlPath string, opt RouteOpt) string {
 	return ""
 }
 
-func uuid(urlPath string, opt RouteOpt) string {
+func checkUuid(urlPath string, _ RouteOpt) string {
 	if len(urlPath) < 36 {
 		return ""
 	}

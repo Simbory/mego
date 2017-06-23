@@ -5,6 +5,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"path"
 	"sync"
+	"os"
+	"path/filepath"
 )
 
 // Handler the watcher handler interface
@@ -25,8 +27,28 @@ type FileWatcher struct {
 }
 
 // AddWatch add path to watch
-func (fw *FileWatcher) AddWatch(path string) error {
-	return fw.watcher.Add(path)
+func (fw *FileWatcher) AddWatch(path string, subDir bool) error {
+	stat,err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	err = fw.watcher.Add(path)
+	if subDir && stat.IsDir() {
+		filepath.Walk(path, func(p string, info os.FileInfo, er error) error {
+			if err != nil {
+				return nil
+			}
+			if er != nil {
+				err = er
+				return er
+			}
+			if info.IsDir() {
+				fw.AddWatch(p, false)
+			}
+			return nil
+		})
+	}
+	return err
 }
 
 // RemoveWatch remove path from watcher

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"errors"
+	"path"
 )
 
 type routeSetting struct {
@@ -58,6 +59,16 @@ func (s *webServer) addRoute(m, p string, h ReqHandler) {
 }
 
 func (s *webServer) onInit() {
+	if len(server.staticDirs) > 0 {
+		for pathPrefix := range server.staticDirs {
+			server.staticDirs[pathPrefix] = http.FileServer(http.Dir(MapPath(pathPrefix)))
+		}
+	}
+	if len(server.staticFiles) > 0 {
+		for u := range server.staticFiles {
+			server.staticFiles[u] = MapPath(u)
+		}
+	}
 	if len(s.routeSettings) > 0 {
 		for _, setting := range s.routeSettings {
 			s.routing.addRoute(setting.method, setting.routePath, setting.reqHandler)
@@ -185,4 +196,9 @@ func (s *webServer) flush(w http.ResponseWriter, req *http.Request, result inter
 		}
 		w.Write(contentBytes)
 	}
+}
+
+func (s *webServer) mapPath(virtualPath string) string {
+	p := path.Join(s.webRoot, virtualPath)
+	return strings.Replace(p, "\\", "/", -1)
 }

@@ -115,7 +115,7 @@ func (c *CacheManager) Add(name string, data interface{}, dependencyFiles []stri
 	c.locker.Unlock()
 	if c.fileWatcher != nil && len(dFiles) > 0 {
 		for _, f := range dFiles {
-			c.fileWatcher.AddWatch(f)
+			c.fileWatcher.AddWatch(f, false)
 		}
 	}
 	return nil

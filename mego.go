@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"path"
 )
 
 var server *webServer
@@ -94,33 +93,29 @@ func Any(routePath string, handler ReqHandler) {
 	server.addRoute("*", routePath, handler)
 }
 
-// Area get the mego area
-func Area(pathPrefix string) *area {
+// GetArea get or create the mego area
+func GetArea(pathPrefix string) *Area {
 	prefix := strings.Trim(pathPrefix, "/")
 	prefix = strings.Trim(prefix, "\\")
 	reg := regexp.MustCompile("[/a-zA-Z0-9_-]+")
 	if !reg.Match([]byte(prefix)) {
 		panic(errors.New("Invalid pathPrefix:" + pathPrefix))
 	}
-	return &area{"/" + prefix, server}
+	return &Area{"/" + prefix, server}
 }
 
 // MapPath Returns the physical file path that corresponds to the specified virtual path.
 // @param virtualPath: the virtual path starts with
 // @return the absolute file path
 func MapPath(virtualPath string) string {
-	p := path.Join(server.webRoot, virtualPath)
-	return strings.Replace(p, "\\", "/", -1)
+	return server.mapPath(virtualPath)
 }
 
 // HandleDir handle static directory
-func HandleDir(pathPrefix, dirPath string) {
+func HandleDir(pathPrefix string) {
 	AssertUnlocked()
 	if len(pathPrefix) == 0 {
 		panic(errors.New("The parameter 'pathPrefix' cannot be empty"))
-	}
-	if len(dirPath) == 0 {
-		dirPath = "."
 	}
 	if !strings.HasPrefix(pathPrefix, "/") {
 		pathPrefix = "/" + pathPrefix
@@ -128,13 +123,13 @@ func HandleDir(pathPrefix, dirPath string) {
 	if !strings.HasSuffix(pathPrefix, "/") {
 		pathPrefix = pathPrefix + "/"
 	}
-	server.staticDirs[pathPrefix] = http.FileServer(http.Dir(dirPath))
+	server.staticDirs[pathPrefix] = nil
 }
 
 // HandleFile handle the url as static file
-func HandleFile(url, filePath string) {
+func HandleFile(url string) {
 	AssertUnlocked()
-	server.staticFiles[url] = filePath
+	server.staticFiles[url] = ""
 }
 
 // Handle404 set custom error handler for status code 404
@@ -179,6 +174,11 @@ func HandleFilter(pathPrefix string, h func(*Context)) error {
 	}
 	server.filters.add(pathPrefix, matchAll, h)
 	return nil
+}
+
+func SetRoot(wwwRoot string) {
+	AssertUnlocked()
+	server.webRoot = wwwRoot
 }
 
 // Run run the application as http
