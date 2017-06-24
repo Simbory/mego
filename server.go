@@ -23,7 +23,7 @@ type webServer struct {
 	staticDirs    map[string]http.Handler
 	staticFiles   map[string]string
 	err404Handler http.HandlerFunc
-	err500Handler Error500Handler
+	err500Handler ErrHandler
 	filters       filterContainer
 	routeSettings []*routeSetting
 	maxFormSize   int64

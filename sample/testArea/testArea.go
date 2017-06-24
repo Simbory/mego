@@ -1,16 +1,16 @@
-package test
+package testArea
 
 import (
 	"github.com/Simbory/mego"
-	"github.com/Simbory/mego/view"
+	"github.com/Simbory/mego/views"
 	"fmt"
 )
 
-var area = mego.GetArea("test")
-var viewEngine *view.ViewEngine
+var area = mego.GetArea("testArea")
+var viewEngine *views.ViewEngine
 
 func getUpload(_ *mego.Context) interface{} {
-	return viewEngine.RenderView("upload", nil)
+	return viewEngine.Render("upload", nil)
 }
 
 func postUpload(ctx *mego.Context) interface{} {
@@ -23,8 +23,8 @@ func postUpload(ctx *mego.Context) interface{} {
 	return fmt.Sprintf("file Size: %d", file.Size)
 }
 
-func InitArea() {
+func Init() {
 	area.Get("upload", getUpload)
 	area.Post("upload", postUpload)
-	viewEngine = view.NewViewEngine(area.Key() + "/views", ".html")
+	viewEngine = views.NewViewEngine(area.Key() + "/views", ".html")
 }

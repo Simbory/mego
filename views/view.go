@@ -1,4 +1,4 @@
-package view
+package views
 
 import (
 	"github.com/Simbory/mego/viewEngine"
@@ -10,7 +10,7 @@ type ViewEngine struct {
 	engine *viewEngine.Engine
 }
 
-func (e *ViewEngine) RenderView(viewName string, data interface{}) mego.Result {
+func (e *ViewEngine) Render(viewName string, data interface{}) mego.Result {
 	if e.engine == nil {
 		panic(errors.New("Cannot render view before the server is started."))
 	}
