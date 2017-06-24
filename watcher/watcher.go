@@ -7,6 +7,7 @@ import (
 	"sync"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Handler the watcher handler interface
@@ -80,8 +81,9 @@ func (fw *FileWatcher) Start() {
 		for {
 			select {
 			case ev := <-fw.watcher.Events:
+				ev.Name = strings.Replace(path.Clean(ev.Name), "\\", "/", -1)
 				for _, detector := range fw.handlers {
-					if detector.CanHandle(path.Clean(ev.Name)) {
+					if detector.CanHandle(ev.Name) {
 						detector.Handle(&ev)
 					}
 				}

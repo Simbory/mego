@@ -32,7 +32,7 @@ func renderView(ctx *mego.Context) interface{} {
 	viewData := map[string]interface{}{
 		"msg": msg,
 	}
-	return view.RenderView(ctx.RouteString("view"), viewData)
+	return viewEngine.RenderView(ctx.RouteString("view"), viewData)
 }
 
 func testSession(ctx *mego.Context) interface{} {
@@ -41,14 +41,14 @@ func testSession(ctx *mego.Context) interface{} {
 	data := sessionStore.Get("msg")
 	if data != nil {
 		msg, _ = data.(string)
-		return &map[string]interface{}{
+		return map[string]interface{}{
 			"msg":         msg,
 			"fromSession": true,
 		}
 	}
 	msg = "Hello, world"
 	sessionStore.Set("msg", msg)
-	return &map[string]interface{}{
+	return map[string]interface{}{
 		"msg":         msg,
 		"fromSession": false,
 	}
@@ -79,6 +79,8 @@ func globalFilter(ctx *mego.Context) {
 	ctx.SetItem("user", "Simbory")
 }
 
+var viewEngine *view.ViewEngine
+
 func main() {
 	mego.HandleDir("/static/")
 	mego.HandleFile("/favicon.ico")
@@ -91,7 +93,7 @@ func main() {
 
 	cache.UseCache(10 * time.Second)
 	session.UseSession(nil)
-	view.UseGlobalView("views", ".html")
+	viewEngine = view.NewViewEngine("views", ".html")
 
 	testArea.InitArea()
 

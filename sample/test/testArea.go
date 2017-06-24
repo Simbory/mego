@@ -6,10 +6,11 @@ import (
 	"fmt"
 )
 
-var testArea = mego.GetArea("test")
+var area = mego.GetArea("test")
+var viewEngine *view.ViewEngine
 
 func getUpload(_ *mego.Context) interface{} {
-	return view.RenderAreaView(testArea,"upload", nil)
+	return viewEngine.RenderView("upload", nil)
 }
 
 func postUpload(ctx *mego.Context) interface{} {
@@ -23,7 +24,7 @@ func postUpload(ctx *mego.Context) interface{} {
 }
 
 func InitArea() {
-	testArea.Get("upload", getUpload)
-	testArea.Post("upload", postUpload)
-	view.UseAreaView(testArea, "views", ".html")
+	area.Get("upload", getUpload)
+	area.Post("upload", postUpload)
+	viewEngine = view.NewViewEngine(area.Key() + "/views", ".html")
 }
