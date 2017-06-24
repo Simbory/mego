@@ -95,7 +95,7 @@ func (c *CacheManager) Add(name string, data interface{}, dependencyFiles []stri
 			if len(file) == 0 {
 				continue
 			}
-			fPath := path.Clean(file)
+			fPath := path.Clean(strings.Replace(file, "\\", "/", -1))
 			if stat, err := os.Stat(fPath); err != nil || stat.IsDir() {
 				return fmt.Errorf("The dependency file does not exist: %s", file)
 			}

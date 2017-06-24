@@ -200,5 +200,6 @@ func (s *webServer) flush(w http.ResponseWriter, req *http.Request, result inter
 
 func (s *webServer) mapPath(virtualPath string) string {
 	p := path.Join(s.webRoot, virtualPath)
-	return strings.Replace(p, "\\", "/", -1)
+	p = path.Clean(strings.Replace(p, "\\", "/", -1))
+	return strings.TrimRight(p, "/")
 }

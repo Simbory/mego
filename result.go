@@ -124,7 +124,7 @@ func (cr *ContentResult) ExecResult(w http.ResponseWriter, r *http.Request) {
 func NewResult() *ContentResult {
 	return &ContentResult{
 		StatusCode:  200,
-		ContentType: "text/html",
+		ContentType: "text/plain",
 		Encoding:    "utf-8",
 	}
 }
@@ -197,10 +197,10 @@ func XML(data interface{}) Result {
 }
 
 // File generate the mego result as file result
-func File(path string, cntType string) Result {
+func File(path string, contentType string) Result {
 	var resp = &FileResult{
 		FilePath:    path,
-		ContentType: cntType,
+		ContentType: contentType,
 	}
 	return resp
 }

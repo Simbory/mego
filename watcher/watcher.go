@@ -3,11 +3,11 @@ package watcher
 import (
 	"errors"
 	"github.com/fsnotify/fsnotify"
-	"path"
 	"sync"
 	"os"
 	"path/filepath"
 	"strings"
+	pathPkg "path"
 )
 
 // Handler the watcher handler interface
@@ -29,6 +29,7 @@ type FileWatcher struct {
 
 // AddWatch add path to watch
 func (fw *FileWatcher) AddWatch(path string, subDir bool) error {
+	path = pathPkg.Clean(strings.Replace(path, "\\", "/", -1))
 	stat,err := os.Stat(path)
 	if err != nil {
 		return err
@@ -81,7 +82,7 @@ func (fw *FileWatcher) Start() {
 		for {
 			select {
 			case ev := <-fw.watcher.Events:
-				ev.Name = strings.Replace(path.Clean(ev.Name), "\\", "/", -1)
+				ev.Name = strings.Replace(pathPkg.Clean(ev.Name), "\\", "/", -1)
 				for _, detector := range fw.handlers {
 					if detector.CanHandle(ev.Name) {
 						detector.Handle(&ev)
@@ -98,12 +99,12 @@ func (fw *FileWatcher) Start() {
 
 // NewWatcher create the new watcher
 func NewWatcher() (*FileWatcher, error) {
-	tmpWatcher, err := fsnotify.NewWatcher()
+	t, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
 	w := &FileWatcher{
-		watcher: tmpWatcher,
+		watcher: t,
 	}
 	return w, nil
 }
