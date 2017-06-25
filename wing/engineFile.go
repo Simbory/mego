@@ -1,4 +1,4 @@
-package viewEngine
+package wing
 
 import (
 	"html/template"
@@ -7,18 +7,18 @@ import (
 	"strings"
 )
 
-type engineTemp struct {
+type tplCache struct {
 	tpl *template.Template
 	err error
 }
 
-type engineFile struct {
+type file struct {
 	viewExt string
 	root    string
 	files   map[string][]string
 }
 
-func (vf *engineFile) visit(paths string, f os.FileInfo, err error) error {
+func (vf *file) visit(paths string, f os.FileInfo, err error) error {
 	if f == nil {
 		return err
 	}

@@ -6,7 +6,7 @@ import (
 )
 
 func testSession(ctx *mego.Context) interface{} {
-	sessionStore := session.Start(ctx)
+	sessionStore := session.Default().Start(ctx)
 	var msg string
 	data := sessionStore.Get("msg")
 	if data != nil {

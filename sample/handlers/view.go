@@ -7,11 +7,11 @@ import (
 )
 
 func renderView(ctx *mego.Context) interface{} {
-	msg := cache.Cache().Get("msg")
+	msg := cache.Default().Get("msg")
 	if msg == nil {
 		msg = time.Now().Format(time.RFC1123Z)
-		expire := time.Now().Add(5 * time.Second)
-		cache.Cache().Add("msg", msg, nil, &expire)
+		expired := time.Second * 5
+		cache.Default().Set("msg", msg, nil, expired)
 	}
 	viewData := map[string]interface{}{
 		"msg": msg,

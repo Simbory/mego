@@ -3,7 +3,7 @@ package cache
 import (
 	"errors"
 	"fmt"
-	"github.com/Simbory/mego/watcher"
+	"github.com/Simbory/mego/fswatcher"
 	"os"
 	"path"
 	"strings"
@@ -15,23 +15,23 @@ var (
 	maxDate = time.Date(9999, 12, 31, 23, 59, 59, 999, time.UTC)
 )
 
-type cacheData struct {
+type dataEntity struct {
 	data         interface{}
 	dependencies []string
 	expire       time.Time
 }
 
-// CacheManager the cache manager struct
-type CacheManager struct {
-	dataMap     map[string]cacheData
-	gcFrequency time.Duration
-	fileWatcher *watcher.FileWatcher
+// Manager implement the cache manager struct
+type Manager struct {
+	dataMap     map[string]*dataEntity
+	gcInterval  time.Duration
+	fileWatcher *fswatcher.FileWatcher
 	locker      *sync.RWMutex
 	started     bool
 	timer       *time.Timer
 }
 
-func (c *CacheManager) fileUsage(fPath string) int {
+func (c *Manager) fileUsage(fPath string) int {
 	count := 0
 	for _, data := range c.dataMap {
 		if len(data.dependencies) > 0 {
@@ -45,44 +45,8 @@ func (c *CacheManager) fileUsage(fPath string) int {
 	return count
 }
 
-// Get get the cache data by name
-func (c *CacheManager) Get(name string) interface{} {
-	if c.dataMap == nil {
-		return nil
-	}
-	data, ok := c.dataMap[name]
-	if ok {
-		if time.Now().Before(data.expire) {
-			return data.data
-		}
-		return nil
-	}
-	return nil
-}
-
-// AllKeys get all the cache keys
-func (c *CacheManager) AllKeys(name string) []string {
-	keys := make([]string, 0, len(c.dataMap))
-	for key := range c.dataMap {
-		keys = append(keys, key)
-	}
-	return keys
-}
-
-// AllData get all the cache and data
-func (c *CacheManager) AllData() map[string]interface{} {
-	var data = make(map[string]interface{})
-	var now = time.Now()
-	for key, value := range c.dataMap {
-		if now.Before(value.expire) {
-			data[key] = value.data
-		}
-	}
-	return data
-}
-
 // Add add cache data to memory
-func (c *CacheManager) Add(name string, data interface{}, dependencyFiles []string, expire *time.Time) error {
+func (c *Manager) Set(name string, data interface{}, dependencyFiles []string, expired time.Duration) error {
 	if len(name) == 0 {
 		return errors.New("The parameter 'name' cannot be empty")
 	}
@@ -97,23 +61,20 @@ func (c *CacheManager) Add(name string, data interface{}, dependencyFiles []stri
 			}
 			fPath := path.Clean(strings.Replace(file, "\\", "/", -1))
 			if stat, err := os.Stat(fPath); err != nil || stat.IsDir() {
-				return fmt.Errorf("The dependency file does not exist: %s", file)
+				return fmt.Errorf("Invalid dependency file. The file cannot be found: \"%s\".", file)
 			}
 			dFiles = append(dFiles, fPath)
 		}
 	}
-	if expire == nil {
-		t := maxDate
-		expire = &t
-	}
+	expireTime := ExpireTime(expired)
 	c.locker.Lock()
-	c.dataMap[name] = cacheData{
+	c.dataMap[name] = &dataEntity{
 		data:         data,
 		dependencies: dFiles,
-		expire:       *expire,
+		expire:       expireTime,
 	}
 	c.locker.Unlock()
-	if c.fileWatcher != nil && len(dFiles) > 0 {
+	if len(dFiles) > 0 {
 		for _, f := range dFiles {
 			c.fileWatcher.AddWatch(f, false)
 		}
@@ -121,8 +82,32 @@ func (c *CacheManager) Add(name string, data interface{}, dependencyFiles []stri
 	return nil
 }
 
+// Get get the data by name
+func (c *Manager) Get(name string) interface{} {
+	if c.dataMap == nil {
+		return nil
+	}
+	data, ok := c.dataMap[name]
+	if ok {
+		if time.Now().Before(data.expire) {
+			return data.data
+		}
+		return nil
+	}
+	return nil
+}
+
+// Keys get all the cache keys
+func (c *Manager) Keys(name string) []string {
+	keys := make([]string, 0, len(c.dataMap))
+	for key := range c.dataMap {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
 // Remove remove the cache from memory by key
-func (c *CacheManager) Remove(name string) {
+func (c *Manager) Remove(name string) {
 	if len(name) == 0 {
 		return
 	}
@@ -142,8 +127,16 @@ func (c *CacheManager) Remove(name string) {
 	c.locker.Unlock()
 }
 
-func (c *CacheManager) gc() {
-	c.timer = time.AfterFunc(gcLifeTime, func(){
+// start init the fswatcher and start the gc lifecycle
+func (c *Manager) start() {
+	if c.started || c.fileWatcher == nil {
+		return
+	}
+	c.started = true
+	c.fileWatcher.Start()
+	c.fileWatcher.AddHandler(&fileHandler{cacheManager: c})
+	// start the cache gc lifecycle
+	c.timer = time.AfterFunc(c.gcInterval, func(){
 		var now = time.Now()
 		for name, data := range c.dataMap {
 			if now.Before(data.expire) {
@@ -155,46 +148,50 @@ func (c *CacheManager) gc() {
 	})
 }
 
-func (c *CacheManager) start() {
-	if c.started || c.fileWatcher == nil {
-		return
-	}
-	c.started = true
-	c.fileWatcher.Start()
-	detector := newCacheDetector(c)
-	c.fileWatcher.AddHandler(detector)
-	c.gc()
+func (c *Manager) Stop() {
+	c.timer.Stop()
+	c.fileWatcher.Stop()
+	c.dataMap = nil
 }
 
-var singleton *CacheManager
-var singletonLock sync.RWMutex
-var gcLifeTime time.Duration
+const DefaultGCInterval = 10 * time.Second
 
-func UseCache(gcFrequency time.Duration) {
-	gcLifeTime = gcFrequency
-	if gcLifeTime == 0 {
-		gcLifeTime = 10 * time.Second
+func NewManager(gcInterval time.Duration) *Manager {
+	if gcInterval <= 0 {
+		panic(fmt.Errorf("Invalid gabage collection time interval: %d", gcInterval))
+	}
+	fw,err := fswatcher.NewWatcher()
+	if err != nil {
+		fw = nil
+	}
+	m := &Manager{
+		locker:      &sync.RWMutex{},
+		dataMap:     make(map[string]*dataEntity),
+		gcInterval:  time.Duration(gcInterval),
+		fileWatcher: fw,
+	}
+	m.start()
+	return m
+}
+
+func ExpireTime(expired time.Duration) time.Time {
+	if expired <= 0 {
+		return maxDate
+	}
+	return time.Now().Add(expired)
+}
+
+var defaultManager *Manager
+
+func UseDefault() {
+	if defaultManager == nil {
+		defaultManager = NewManager(DefaultGCInterval)
 	}
 }
 
-func Cache() *CacheManager {
-	if singleton == nil {
-		singletonLock.Lock()
-		if singleton == nil {
-			if gcLifeTime == 0 {
-				panic(errors.New("Could not start the cache manager. The function 'UseCache(gcFrequency time.Duration)' should be called first."))
-			}
-			fw := watcher.Singleton()
-			singleton = &CacheManager{
-				locker:      &sync.RWMutex{},
-				dataMap:     make(map[string]cacheData),
-				gcFrequency: gcLifeTime,
-				fileWatcher: fw,
-			}
-			fw.Start()
-			singleton.start()
-		}
-		singletonLock.Unlock()
+func Default() *Manager {
+	if defaultManager == nil {
+		panic(errors.New("You need to call UseDefault() function first before getting the default cache manager"))
 	}
-	return singleton
+	return defaultManager
 }

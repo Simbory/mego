@@ -1,13 +1,13 @@
 package views
 
 import (
-	"github.com/Simbory/mego/viewEngine"
+	"github.com/Simbory/mego/wing"
 	"github.com/Simbory/mego"
 	"errors"
 )
 
 type ViewEngine struct {
-	engine *viewEngine.Engine
+	engine *wing.ViewEngine
 }
 
 func (e *ViewEngine) Render(viewName string, data interface{}) mego.Result {
@@ -30,7 +30,7 @@ func NewViewEngine(viewDir, viewExt string) *ViewEngine {
 	}
 	engine := &ViewEngine{}
 	mego.OnStart(func() {
-		e,err := viewEngine.NewEngine(mego.MapPath(viewDir), viewExt)
+		e,err := wing.NewEngine(mego.MapPath(viewDir), viewExt)
 		if err != nil {
 			panic(err)
 		}

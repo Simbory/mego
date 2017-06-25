@@ -5,34 +5,35 @@ import (
 	"strings"
 )
 
-type fsCacheHandler struct {
-	cacheManager *CacheManager
-	cacheKey     string
+type fileHandler struct {
+	cacheManager *Manager
+	cacheKeys    []string
 }
 
 // CanHandle detect the fsnotify path can handled by current detector
-func (cd *fsCacheHandler) CanHandle(path string) bool {
+func (cd *fileHandler) CanHandle(path string) bool {
+	cd.cacheKeys = nil
+	found := false
 	for name, data := range cd.cacheManager.dataMap {
 		if len(data.dependencies) == 0 {
 			continue
 		}
 		for _, file := range data.dependencies {
 			if strings.EqualFold(file, path) {
-				cd.cacheKey = name
-				return true
+				cd.cacheKeys = append(cd.cacheKeys, name)
+				found = true
 			}
 		}
 	}
-	return false
+	return found
 }
 
 // Handle handle the fsnotify changes
-func (cd *fsCacheHandler) Handle(ev *fsnotify.Event) {
+func (cd *fileHandler) Handle(ev *fsnotify.Event) {
 	cd.cacheManager.locker.Lock()
-	delete(cd.cacheManager.dataMap, cd.cacheKey)
+	for _, key := range cd.cacheKeys {
+		cd.cacheManager.dataMap[key] = nil
+		delete(cd.cacheManager.dataMap, key)
+	}
 	cd.cacheManager.locker.Lock()
-}
-
-func newCacheDetector(manager *CacheManager) *fsCacheHandler {
-	return &fsCacheHandler{cacheManager: manager}
 }

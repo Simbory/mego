@@ -1,16 +1,15 @@
-package watcher
+package fswatcher
 
 import (
 	"errors"
 	"github.com/fsnotify/fsnotify"
-	"sync"
 	"os"
 	"path/filepath"
 	"strings"
 	pathPkg "path"
 )
 
-// Handler the watcher handler interface
+// Handler the fswatcher handler interface
 type Handler interface {
 	CanHandle(path string) bool
 	Handle(ev *fsnotify.Event)
@@ -19,7 +18,7 @@ type Handler interface {
 // ErrorHandler the fsnotify error handler
 type ErrorHandler func(error)
 
-// FileWatcher the file watcher struct
+// FileWatcher the file fswatcher struct
 type FileWatcher struct {
 	watcher        *fsnotify.Watcher
 	handlers       []Handler
@@ -53,12 +52,12 @@ func (fw *FileWatcher) AddWatch(path string, subDir bool) error {
 	return err
 }
 
-// RemoveWatch remove path from watcher
-func (fw *FileWatcher) RemoveWatch(strFile string) error {
-	return fw.watcher.Remove(strFile)
+// RemoveWatch remove the path from fswatcher. And then, the system will stop watching the changes.
+func (fw *FileWatcher) RemoveWatch(path string) error {
+	return fw.watcher.Remove(path)
 }
 
-// AddHandler add file watcher handler
+// AddHandler add file fswatcher handler
 func (fw *FileWatcher) AddHandler(handler Handler) error {
 	if handler == nil {
 		return errors.New("The parameter 'handler' cannot be nil")
@@ -72,7 +71,7 @@ func (fw *FileWatcher) SetErrorHandler(h ErrorHandler) {
 	fw.errorProcessor = h
 }
 
-// Start star the file watcher
+// Start star the file fswatcher
 func (fw *FileWatcher) Start() {
 	if fw.started {
 		return
@@ -93,11 +92,19 @@ func (fw *FileWatcher) Start() {
 					fw.errorProcessor(err)
 				}
 			}
+			if !fw.started {
+				break
+			}
 		}
 	}()
 }
 
-// NewWatcher create the new watcher
+func (fw *FileWatcher) Stop() {
+	fw.watcher.Close()
+	fw.started = false
+}
+
+// NewWatcher create the new fswatcher
 func NewWatcher() (*FileWatcher, error) {
 	t, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -107,22 +114,4 @@ func NewWatcher() (*FileWatcher, error) {
 		watcher: t,
 	}
 	return w, nil
-}
-
-var singleton *FileWatcher
-var singletonLocker = sync.RWMutex{}
-
-func Singleton() *FileWatcher {
-	if singleton == nil {
-		singletonLocker.Lock()
-		if singleton == nil {
-			s, err := NewWatcher()
-			if err != nil {
-				panic(err)
-			}
-			singleton = s
-		}
-		singletonLocker.Unlock()
-	}
-	return singleton
 }

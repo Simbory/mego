@@ -2,13 +2,13 @@ package views
 
 import (
 	"net/http"
-	"github.com/Simbory/mego/viewEngine"
+	"github.com/Simbory/mego/wing"
 )
 
 type result struct {
 	viewName string
 	data     interface{}
-	engine   *viewEngine.Engine
+	engine   *wing.ViewEngine
 }
 
 func (vr *result) ExecResult(w http.ResponseWriter, r *http.Request) {

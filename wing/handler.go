@@ -1,4 +1,4 @@
-package viewEngine
+package wing
 
 import (
 	"github.com/fsnotify/fsnotify"
@@ -8,7 +8,7 @@ import (
 )
 
 type compileHandler struct {
-	engine *Engine
+	engine *ViewEngine
 }
 
 func (vh *compileHandler) CanHandle(path string) bool {

@@ -1,4 +1,4 @@
-package viewEngine
+package wing
 
 import (
 	"html/template"
@@ -12,21 +12,21 @@ import (
 	"io"
 	"errors"
 	"bytes"
-	"github.com/Simbory/mego/watcher"
+	"github.com/Simbory/mego/fswatcher"
 )
 
-type Engine struct {
+type ViewEngine struct {
 	viewDir  string
 	viewExt  string
 	funcMap  template.FuncMap
 	locker   sync.RWMutex
-	viewMap  map[string]*engineTemp
+	viewMap  map[string]*tplCache
 	compiled bool
 
-	watcher *watcher.FileWatcher
+	watcher *fswatcher.FileWatcher
 }
 
-func (engine *Engine) AddFunc(name string, viewFunc interface{}) {
+func (engine *ViewEngine) AddFunc(name string, viewFunc interface{}) {
 	if len(name) < 1 || viewFunc == nil {
 		return
 	}
@@ -38,24 +38,24 @@ func (engine *Engine) AddFunc(name string, viewFunc interface{}) {
 	}
 }
 
-func (engine *Engine) addView(name string, v *engineTemp) {
+func (engine *ViewEngine) addView(name string, v *tplCache) {
 	if len(name) == 0 || v == nil {
 		return
 	}
 	if engine.viewMap == nil {
-		engine.viewMap = map[string]*engineTemp{}
+		engine.viewMap = map[string]*tplCache{}
 	}
 	engine.viewMap[name] = v
 }
 
-func (engine *Engine) getView(name string) *engineTemp {
+func (engine *ViewEngine) getView(name string) *tplCache {
 	if engine.viewMap == nil {
 		return nil
 	}
 	return engine.viewMap[name]
 }
 
-func (engine *Engine) getTemplateDeep(file, parent string, t *template.Template) (*template.Template, [][]string, error){
+func (engine *ViewEngine) getDeep(file, parent string, t *template.Template) (*template.Template, [][]string, error){
 	var fileAbsPath string
 	if strings.HasPrefix(file, "../") {
 		fileAbsPath = filepath.Join(engine.viewDir, filepath.Dir(parent), file)
@@ -86,7 +86,7 @@ func (engine *Engine) getTemplateDeep(file, parent string, t *template.Template)
 			if look != nil {
 				continue
 			}
-			t, _, err = engine.getTemplateDeep(name, file, t)
+			t, _, err = engine.getDeep(name, file, t)
 			if err != nil {
 				return nil, [][]string{}, err
 			}
@@ -95,7 +95,7 @@ func (engine *Engine) getTemplateDeep(file, parent string, t *template.Template)
 	return t, allSub, nil
 }
 
-func (engine *Engine) getTemplateLoop(temp *template.Template, subMods [][]string, others ...string) (t *template.Template, err error) {
+func (engine *ViewEngine) getLoop(temp *template.Template, subMods [][]string, others ...string) (t *template.Template, err error) {
 	t = temp
 	for _, m := range subMods {
 		if len(m) == 2 {
@@ -107,11 +107,11 @@ func (engine *Engine) getTemplateLoop(temp *template.Template, subMods [][]strin
 			for _, otherFile := range others {
 				if otherFile == m[1] {
 					var subMods1 [][]string
-					t, subMods1, err = engine.getTemplateDeep(otherFile, "", t)
+					t, subMods1, err = engine.getDeep(otherFile, "", t)
 					if err != nil {
 						return nil, err
 					} else if subMods1 != nil && len(subMods1) > 0 {
-						t, err = engine.getTemplateLoop(t, subMods1, others...)
+						t, err = engine.getLoop(t, subMods1, others...)
 					}
 					break
 				}
@@ -123,16 +123,16 @@ func (engine *Engine) getTemplateLoop(temp *template.Template, subMods [][]strin
 				if err != nil {
 					continue
 				}
-				reg := regexp.MustCompile("{{" + "[ ]*define[ ]+\"([^\"]+)\"")
+				reg := regexp.MustCompile("[{]{2}[ \t]*define[ \t]+\"([^\"]+)\"")
 				allSub := reg.FindAllStringSubmatch(string(data), -1)
 				for _, sub := range allSub {
 					if len(sub) == 2 && sub[1] == m[1] {
 						var subMods1 [][]string
-						t, subMods1, err = engine.getTemplateDeep(otherFile, "", t)
+						t, subMods1, err = engine.getDeep(otherFile, "", t)
 						if err != nil {
 							return nil, err
 						} else if subMods1 != nil && len(subMods1) > 0 {
-							t, err = engine.getTemplateLoop(t, subMods1, others...)
+							t, err = engine.getLoop(t, subMods1, others...)
 						}
 						break
 					}
@@ -143,24 +143,24 @@ func (engine *Engine) getTemplateLoop(temp *template.Template, subMods [][]strin
 	return
 }
 
-func (engine *Engine) getTemplate(file string, others ...string) (t *template.Template, err error) {
-	t = template.New(file)
+func (engine *ViewEngine) getTplCache(file string, others ...string) *tplCache {
+	t := template.New(file)
 	if engine.funcMap != nil {
 		t.Funcs(engine.funcMap)
 	}
 	var subMods [][]string
-	t, subMods, err = engine.getTemplateDeep(file, "", t)
+	t, subMods, err := engine.getDeep(file, "", t)
 	if err != nil {
-		return nil, err
+		return &tplCache{nil, err}
 	}
-	t, err = engine.getTemplateLoop(t, subMods, others...)
+	t, err = engine.getLoop(t, subMods, others...)
 	if err != nil {
-		return nil, err
+		return &tplCache{nil, err}
 	}
-	return
+	return &tplCache{t, nil}
 }
 
-func (engine *Engine) compile() error {
+func (engine *ViewEngine) compile() error {
 	engine.locker.Lock()
 	defer engine.locker.Unlock()
 	if engine.compiled {
@@ -174,7 +174,7 @@ func (engine *Engine) compile() error {
 		}
 		return fmt.Errorf("Cannot open view path: %s", engine.viewDir)
 	}
-	vf := &engineFile{
+	vf := &file{
 		root:    engine.viewDir,
 		files:   make(map[string][]string),
 		viewExt: engine.viewExt,
@@ -187,8 +187,7 @@ func (engine *Engine) compile() error {
 	}
 	for _, v := range vf.files {
 		for _, file := range v {
-			t, err := engine.getTemplate(file, v...)
-			v := &engineTemp{tpl: t, err: err}
+			v := engine.getTplCache(file, v...)
 			engine.addView(file, v)
 		}
 	}
@@ -196,7 +195,7 @@ func (engine *Engine) compile() error {
 	return nil
 }
 
-func (engine *Engine) includeView(viewName string, data interface{}) template.HTML {
+func (engine *ViewEngine) includeView(viewName string, data interface{}) template.HTML {
 	buf := &bytes.Buffer{}
 	err := engine.Render(buf, viewName, data)
 	if err != nil {
@@ -205,7 +204,7 @@ func (engine *Engine) includeView(viewName string, data interface{}) template.HT
 	return template.HTML(buf.Bytes())
 }
 
-func (engine *Engine) Clear() {
+func (engine *ViewEngine) Clear() {
 	engine.locker.Lock()
 	defer engine.locker.Unlock()
 
@@ -213,7 +212,7 @@ func (engine *Engine) Clear() {
 	engine.viewMap = nil
 }
 
-func (engine *Engine) Render(writer io.Writer, viewPath string, viewData interface{}) error {
+func (engine *ViewEngine) Render(writer io.Writer, viewPath string, viewData interface{}) error {
 	if len(viewPath) < 1 {
 		return errors.New("The parameter 'viewPath' cannot be empty")
 	}
@@ -240,18 +239,18 @@ func (engine *Engine) Render(writer io.Writer, viewPath string, viewData interfa
 	return nil
 }
 
-func NewEngine(rootDir, ext string) (*Engine,error) {
+func NewEngine(rootDir, ext string) (*ViewEngine,error) {
 	if len(ext) == 0 {
 		ext = ".html"
 	}
 	if !strings.HasPrefix(ext, ".") {
 		ext = "." + ext
 	}
-	w,err := watcher.NewWatcher()
+	w,err := fswatcher.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
-	engine := &Engine{
+	engine := &ViewEngine{
 		viewDir: rootDir,
 		viewExt: strings.ToLower(ext),
 		watcher: w,

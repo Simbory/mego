@@ -1,7 +1,6 @@
 package main
 
 import (
-	"time"
 	"github.com/Simbory/mego"
 	"github.com/Simbory/mego/cache"
 	"github.com/Simbory/mego/session"
@@ -13,8 +12,9 @@ import (
 func main() {
 	mego.HandleDir("/static/")
 	mego.HandleFile("/favicon.ico")
-	cache.UseCache(10 * time.Second)
-	session.UseSession(nil)
+
+	cache.UseDefault()
+	session.UseDefault()
 
 	handlers.Init()
 	filters.Init()
