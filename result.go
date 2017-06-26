@@ -205,18 +205,8 @@ func File(path string, contentType string) Result {
 	return resp
 }
 
-func initViewEngine() {
-	if server.viewEngine == nil {
-		server.engineLock.Lock()
-		defer server.engineLock.Unlock()
-		if server.viewEngine == nil {
-			server.viewEngine = NewViewEngine("/views", ".html")
-		}
-	}
-}
-
 func View(viewName string, data interface{}) Result {
-	initViewEngine()
+	server.initViewEngine()
 	return server.viewEngine.Render(viewName, data)
 }
 

@@ -18,7 +18,7 @@ func (a *Area) Key() string {
 	return a.pathPrefix
 }
 
-// Dir get the area directory
+// Dir get the physical directory of the current area
 func (a *Area) Dir() string {
 	return server.mapPath(a.pathPrefix)
 }
@@ -77,15 +77,17 @@ func (a *Area)Any(routePath string, handler ReqHandler) {
 	a.server.addRoute("*", a.fixPath(routePath), handler)
 }
 
+// View render the view file and get the result
 func (a *Area) View(viewName string, data interface{}) Result {
 	a.initViewEngine()
 	return a.viewEngine.Render(viewName, data)
 }
 
-func (a *Area)fixPath(routePath string) string {
-	routePath = strings.Trim(routePath, "/")
-	routePath = strings.Trim(routePath, "\\")
-	return fmt.Sprintf("%s/%s", a.pathPrefix, routePath)
+// ExtendView add view function to the view engine of the current area
+func (a *Area) ExtendView(name string, f interface{}) {
+	a.server.assertUnlocked()
+	a.initViewEngine()
+	a.viewEngine.ExtendViewFunc(name, f)
 }
 
 func (a *Area) initViewEngine() {
@@ -96,4 +98,10 @@ func (a *Area) initViewEngine() {
 			a.viewEngine = NewViewEngine(a.Key()+"/views", ".html")
 		}
 	}
+}
+
+func (a *Area)fixPath(routePath string) string {
+	routePath = strings.Trim(routePath, "/")
+	routePath = strings.Trim(routePath, "\\")
+	return fmt.Sprintf("%s/%s", a.pathPrefix, routePath)
 }

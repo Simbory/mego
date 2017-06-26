@@ -186,6 +186,12 @@ func SetRoot(wwwRoot string) {
 	server.webRoot = wwwRoot
 }
 
+func ExtendView(name string, f interface{}) {
+	AssertUnlocked()
+	server.initViewEngine()
+	server.viewEngine.ExtendViewFunc(name, f)
+}
+
 // Run run the application as http
 func Run(addr string) {
 	server.onInit()

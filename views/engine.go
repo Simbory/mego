@@ -149,12 +149,11 @@ func (engine *ViewEngine) compile() error {
 		return nil
 	}
 	engine.AddFunc("include", engine.includeView)
-	engine.viewDir = engine.viewDir
 	if _, err := os.Stat(engine.viewDir); err != nil {
 		if os.IsNotExist(err) {
 			return err
 		}
-		return fmt.Errorf("Cannot open view path: %s", engine.viewDir)
+		return fmt.Errorf("Failed to open view directory '%s'.", engine.viewDir)
 	}
 	vf := &file{
 		root:    engine.viewDir,
@@ -212,7 +211,7 @@ func (engine *ViewEngine) Render(writer io.Writer, viewPath string, viewData int
 		return err
 	}
 	if tpl == nil{
-		return fmt.Errorf("The view file '%s' canot be found", viewPath)
+		return fmt.Errorf("The view file '%s' cannot be found", viewPath)
 	}
 	err = tpl.Execute(writer, viewData)
 	if err != nil {
@@ -242,7 +241,7 @@ func NewEngine(rootDir, ext string) (*ViewEngine, error) {
 		return nil, err
 	}
 	if !stat.IsDir() {
-		return nil, fmt.Errorf("The view folder '%s' does not exist.", engine.viewDir)
+		return nil, fmt.Errorf("Failed to open the view directory '%s'.", engine.viewDir)
 	}
 	engine.watcher.AddHandler(&compileHandler{engine})
 	engine.watcher.Start()

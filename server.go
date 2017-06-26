@@ -207,3 +207,13 @@ func (s *webServer) mapPath(virtualPath string) string {
 	p = path.Clean(strings.Replace(p, "\\", "/", -1))
 	return strings.TrimRight(p, "/")
 }
+
+func (s *webServer)initViewEngine() {
+	if s.viewEngine == nil {
+		s.engineLock.Lock()
+		defer s.engineLock.Unlock()
+		if s.viewEngine == nil {
+			s.viewEngine = NewViewEngine("/views", ".html")
+		}
+	}
+}
