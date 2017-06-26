@@ -189,7 +189,7 @@ func SetRoot(wwwRoot string) {
 func ExtendView(name string, f interface{}) {
 	AssertUnlocked()
 	server.initViewEngine()
-	server.viewEngine.ExtendViewFunc(name, f)
+	server.viewEngine.ExtendView(name, f)
 }
 
 // Run run the application as http

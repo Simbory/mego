@@ -36,7 +36,7 @@ func (e *ViewEngine) Render(viewName string, data interface{}) Result {
 	}
 }
 
-func (e *ViewEngine) ExtendViewFunc(name string, viewFunc interface{}) {
+func (e *ViewEngine) ExtendView(name string, viewFunc interface{}) {
 	if len(name) == 0 || viewFunc == nil {
 		return
 	}

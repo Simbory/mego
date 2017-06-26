@@ -87,7 +87,7 @@ func (a *Area) View(viewName string, data interface{}) Result {
 func (a *Area) ExtendView(name string, f interface{}) {
 	a.server.assertUnlocked()
 	a.initViewEngine()
-	a.viewEngine.ExtendViewFunc(name, f)
+	a.viewEngine.ExtendView(name, f)
 }
 
 func (a *Area) initViewEngine() {
