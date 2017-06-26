@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 var server *webServer
@@ -101,7 +102,11 @@ func GetArea(pathPrefix string) *Area {
 	if !reg.Match([]byte(prefix)) {
 		panic(errors.New("Invalid pathPrefix:" + pathPrefix))
 	}
-	return &Area{"/" + prefix, server}
+	return &Area{
+		pathPrefix: "/" + prefix,
+		server: server,
+		engineLock: &sync.RWMutex{},
+	}
 }
 
 // MapPath Returns the physical file path that corresponds to the specified virtual path.

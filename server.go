@@ -8,6 +8,7 @@ import (
 	"strings"
 	"errors"
 	"path"
+	"sync"
 )
 
 type routeSetting struct {
@@ -28,6 +29,8 @@ type webServer struct {
 	routeSettings []*routeSetting
 	maxFormSize   int64
 	webRoot       string
+	viewEngine    *ViewEngine
+	engineLock    *sync.RWMutex
 }
 
 func newServer() *webServer {
@@ -40,6 +43,7 @@ func newServer() *webServer {
 		err404Handler: handle404,
 		err500Handler: handle500,
 		filters: make(filterContainer),
+		engineLock: &sync.RWMutex{},
 	}
 	return s
 }

@@ -1,4 +1,4 @@
-package wing
+package views
 
 import (
 	"html/template"

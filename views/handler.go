@@ -1,4 +1,4 @@
-package wing
+package views
 
 import (
 	"github.com/fsnotify/fsnotify"

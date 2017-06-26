@@ -3,11 +3,14 @@ package mego
 import (
 	"strings"
 	"fmt"
+	"sync"
 )
 
 type Area struct {
 	pathPrefix string
 	server *webServer
+	viewEngine *ViewEngine
+	engineLock *sync.RWMutex
 }
 
 // Key get the area key/pathPrefix
@@ -74,8 +77,23 @@ func (a *Area)Any(routePath string, handler ReqHandler) {
 	a.server.addRoute("*", a.fixPath(routePath), handler)
 }
 
+func (a *Area) View(viewName string, data interface{}) Result {
+	a.initViewEngine()
+	return a.viewEngine.Render(viewName, data)
+}
+
 func (a *Area)fixPath(routePath string) string {
 	routePath = strings.Trim(routePath, "/")
 	routePath = strings.Trim(routePath, "\\")
 	return fmt.Sprintf("%s/%s", a.pathPrefix, routePath)
+}
+
+func (a *Area) initViewEngine() {
+	if a.viewEngine == nil {
+		a.engineLock.Lock()
+		defer a.engineLock.Unlock()
+		if a.viewEngine == nil {
+			a.viewEngine = NewViewEngine(a.Key()+"/views", ".html")
+		}
+	}
 }

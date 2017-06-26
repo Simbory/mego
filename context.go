@@ -101,10 +101,10 @@ func (ctx *Context) RouteBool(key string) bool {
 	return true
 }
 
-func (ctx *Context) PostFile(formName string) *PostFile {
+func (ctx *Context) PostFile(formName string) *UploadFile {
 	f, h, err := ctx.Request().FormFile(formName)
 	if err != nil {
-		return &PostFile{Error: err}
+		return &UploadFile{Error: err}
 	}
 	if f == nil {
 		return nil
@@ -115,7 +115,7 @@ func (ctx *Context) PostFile(formName string) *PostFile {
 	} else {
 		size = 0
 	}
-	return &PostFile{FileName: h.Filename, Size: size, File: f, Header: h}
+	return &UploadFile{FileName: h.Filename, Size: size, File: f, Header: h}
 }
 
 // SetItem add context data to mego context

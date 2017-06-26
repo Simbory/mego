@@ -12,10 +12,10 @@ type ErrHandler func(http.ResponseWriter, *http.Request, interface{})
 
 // handle404 the default error 404 handler
 func handle404(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	buf := bytes.NewBuffer(nil)
 	buf.WriteString("<h3>Error 404: Not Found</h3>")
 	buf.WriteString("<p>The page you are looking for is not found: <i>" + r.URL.String() + "</i></p>")
+	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(404)
 	w.Write(buf.Bytes())
 }
@@ -33,6 +33,7 @@ func handle500(w http.ResponseWriter, r *http.Request, rec interface{}) {
 	}
 	buf.WriteString(debugStack)
 	buf.WriteString("</code></pre>")
+	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(500)
 	w.Write(buf.Bytes())
 }

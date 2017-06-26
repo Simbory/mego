@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-type PostFile struct {
+type UploadFile struct {
 	FileName string
 	Size     int64
 	Error    error
@@ -14,7 +14,7 @@ type PostFile struct {
 	Header *multipart.FileHeader
 }
 
-func (file *PostFile) Save(path string) error {
+func (file *UploadFile) Save(path string) error {
 	if file.Error != nil {
 		return file.Error
 	}
@@ -29,7 +29,7 @@ func (file *PostFile) Save(path string) error {
 	return err
 }
 
-func (file *PostFile) SaveAndClose(path string) error {
+func (file *UploadFile) SaveAndClose(path string) error {
 	err := file.Save(path)
 	if file.File != nil {
 		err1 := file.File.Close()

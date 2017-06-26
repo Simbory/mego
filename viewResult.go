@@ -1,17 +1,17 @@
-package views
+package mego
 
 import (
 	"net/http"
-	"github.com/Simbory/mego/wing"
+	"github.com/Simbory/mego/views"
 )
 
-type result struct {
+type viewResult struct {
 	viewName string
 	data     interface{}
-	engine   *wing.ViewEngine
+	engine   *views.ViewEngine
 }
 
-func (vr *result) ExecResult(w http.ResponseWriter, r *http.Request) {
+func (vr *viewResult) ExecResult(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	err := vr.engine.Render(w, vr.viewName, vr.data)
 	if err != nil {

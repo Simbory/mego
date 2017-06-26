@@ -1,14 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-    <link rel="stylesheet" href="/static/main.css" />
-</head>
-<body>
-    {{include "partial/header" .}}
+{{define "body"}}
+    {{include "partial/header.html" .}}
     <form action="" method="post">
         <button type="submit">submit form</button>
     </form>
-</body>
-</html>
+{{end}}
+
+{{template "layout.html" .}}

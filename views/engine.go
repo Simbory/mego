@@ -1,4 +1,4 @@
-package wing
+package views
 
 import (
 	"html/template"
@@ -48,11 +48,15 @@ func (engine *ViewEngine) addView(name string, v *tplCache) {
 	engine.viewMap[name] = v
 }
 
-func (engine *ViewEngine) getView(name string) *tplCache {
+func (engine *ViewEngine) getView(name string) (*template.Template, error) {
 	if engine.viewMap == nil {
-		return nil
+		return nil, nil
 	}
-	return engine.viewMap[name]
+	cache := engine.viewMap[name]
+	if cache == nil {
+		return nil, nil
+	}
+	return cache.tpl, cache.err
 }
 
 func (engine *ViewEngine) getDeep(file, parent string, t *template.Template) (*template.Template, [][]string, error){
@@ -64,7 +68,7 @@ func (engine *ViewEngine) getDeep(file, parent string, t *template.Template) (*t
 	}
 	stat, err := os.Stat(fileAbsPath)
 	if err != nil || stat.IsDir() {
-		return nil, [][]string{}, fmt.Errorf("Cannot open the view file %s", file)
+		return nil, [][]string{}, fmt.Errorf("The partial view '%s' in '%s' canot be found", file, parent)
 	}
 	data, err := ioutil.ReadFile(fileAbsPath)
 	if err != nil {
@@ -79,8 +83,8 @@ func (engine *ViewEngine) getDeep(file, parent string, t *template.Template) (*t
 	for _, m := range allSub {
 		if len(m) == 2 {
 			name := m[1]
-			if !strings.HasSuffix(name, engine.viewExt) {
-				name = name + engine.viewExt
+			if !strings.HasSuffix(strings.ToLower(name), engine.viewExt) {
+				continue
 			}
 			look := t.Lookup(name)
 			if look != nil {
@@ -103,7 +107,7 @@ func (engine *ViewEngine) getLoop(temp *template.Template, subMods [][]string, o
 			if tpl != nil {
 				continue
 			}
-			//first check filename
+			//check filename
 			for _, otherFile := range others {
 				if otherFile == m[1] {
 					var subMods1 [][]string
@@ -114,28 +118,6 @@ func (engine *ViewEngine) getLoop(temp *template.Template, subMods [][]string, o
 						t, err = engine.getLoop(t, subMods1, others...)
 					}
 					break
-				}
-			}
-			//second check define
-			for _, otherFile := range others {
-				fileAbsPath := filepath.Join(engine.viewDir, otherFile)
-				data, err := ioutil.ReadFile(fileAbsPath)
-				if err != nil {
-					continue
-				}
-				reg := regexp.MustCompile("[{]{2}[ \t]*define[ \t]+\"([^\"]+)\"")
-				allSub := reg.FindAllStringSubmatch(string(data), -1)
-				for _, sub := range allSub {
-					if len(sub) == 2 && sub[1] == m[1] {
-						var subMods1 [][]string
-						t, subMods1, err = engine.getDeep(otherFile, "", t)
-						if err != nil {
-							return nil, err
-						} else if subMods1 != nil && len(subMods1) > 0 {
-							t, err = engine.getLoop(t, subMods1, others...)
-						}
-						break
-					}
 				}
 			}
 		}
@@ -225,21 +207,21 @@ func (engine *ViewEngine) Render(writer io.Writer, viewPath string, viewData int
 			return err
 		}
 	}
-	tpl := engine.getView(viewPath)
-	if tpl == nil || tpl.tpl == nil {
-		return fmt.Errorf("The viewPath '%s' canot be found", viewPath)
+	tpl,err := engine.getView(viewPath)
+	if err != nil {
+		return err
 	}
-	if tpl.err != nil {
-		return tpl.err
+	if tpl == nil{
+		return fmt.Errorf("The view file '%s' canot be found", viewPath)
 	}
-	err := tpl.tpl.Execute(writer, viewData)
+	err = tpl.Execute(writer, viewData)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func NewEngine(rootDir, ext string) (*ViewEngine,error) {
+func NewEngine(rootDir, ext string) (*ViewEngine, error) {
 	if len(ext) == 0 {
 		ext = ".html"
 	}
