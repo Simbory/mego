@@ -23,7 +23,7 @@ type Config struct {
 
 // Manager the session manager struct
 type Manager struct {
-	provider SessionProvider
+	provider Provider
 	config   *Config
 }
 
@@ -50,36 +50,36 @@ func (manager *Manager) isSecure(req *http.Request) bool {
 	return true
 }
 
-// GetSessionStore Get Store by its id.
-func (manager *Manager) GetSessionStore(sid string) (sessions Store) {
-	sessions = manager.provider.SessionRead(sid)
+// GetSessionStore Get Storage by its id.
+func (manager *Manager) GetSessionStore(sid string) (sessions Storage) {
+	sessions = manager.provider.Read(sid)
 	return
 }
 
 // GC Start session gc process.
 // it can do gc in times after gc lifetime.
 func (manager *Manager) GC() {
-	manager.provider.SessionGC()
+	manager.provider.GC()
 	time.AfterFunc(time.Duration(manager.config.GcLifetime)*time.Second, func() { manager.GC() })
 }
 
 
 
 // Start generate or read the session id from http request.
-// if session id exists, return Store with this id.
-func (manager *Manager) Start(ctx *mego.Context) Store {
+// if session id exists, return Storage with this id.
+func (manager *Manager) Start(ctx *mego.Context) Storage {
 	r := ctx.Request()
 	w := ctx.Response()
 	id, err := manager.getSessionID(r)
 	if err != nil {
 		return nil
 	}
-	if id != "" && manager.provider.SessionExist(id) {
-		return manager.provider.SessionRead(id)
+	if id != "" && manager.provider.Exist(id) {
+		return manager.provider.Read(id)
 	}
 	// Generate a new store
 	id = newSessionId()
-	store := manager.provider.SessionRead(id)
+	store := manager.provider.Read(id)
 	cookie := &http.Cookie{
 		Name:     manager.config.CookieName,
 		Value:    url.QueryEscape(id),
@@ -110,7 +110,7 @@ func (manager *Manager) Destroy(ctx *mego.Context) {
 		return
 	}
 	sid, _ := url.QueryUnescape(cookie.Value)
-	manager.provider.SessionDestroy(sid)
+	manager.provider.Destroy(sid)
 	if manager.config.EnableSetCookie {
 		expiration := time.Now()
 		cookie = &http.Cookie{
@@ -124,15 +124,15 @@ func (manager *Manager) Destroy(ctx *mego.Context) {
 	}
 }
 
-// RegenerateID Regenerate a session id for this Store who's id is saving in http request.
-func (manager *Manager) RegenerateID(ctx *mego.Context) (session Store) {
+// RegenerateID Regenerate a session id for this Storage who's id is saving in http request.
+func (manager *Manager) RegenerateID(ctx *mego.Context) (session Storage) {
 	r := ctx.Request()
 	w := ctx.Response()
 	sid := newSessionId()
 	cookie, err := r.Cookie(manager.config.CookieName)
 	if err != nil || cookie.Value == "" {
 		//delete old cookie
-		session = manager.provider.SessionRead(sid)
+		session = manager.provider.Read(sid)
 		cookie = &http.Cookie{Name: manager.config.CookieName,
 			Value:                  url.QueryEscape(sid),
 			Path:                   "/",
@@ -142,7 +142,7 @@ func (manager *Manager) RegenerateID(ctx *mego.Context) (session Store) {
 		}
 	} else {
 		oldSessionId, _ := url.QueryUnescape(cookie.Value)
-		session, _ = manager.provider.SessionRegenerate(oldSessionId, sid)
+		session, _ = manager.provider.Regenerate(oldSessionId, sid)
 		cookie.Value = url.QueryEscape(sid)
 		cookie.HttpOnly = true
 		cookie.Path = "/"
@@ -158,12 +158,12 @@ func (manager *Manager) RegenerateID(ctx *mego.Context) (session Store) {
 	return
 }
 
-func newSessionManager(provideName string, config *Config, provider SessionProvider) (*Manager, error) {
+func newSessionManager(config *Config, provider Provider) (*Manager, error) {
 	config.EnableSetCookie = true
 	if config.MaxLifetime == 0 {
 		config.MaxLifetime = config.GcLifetime
 	}
-	err := provider.SessionInit(config.MaxLifetime, config.ProviderConfig)
+	err := provider.Init(config.MaxLifetime, config.ProviderConfig)
 	if err != nil {
 		return nil, err
 	}

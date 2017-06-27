@@ -18,7 +18,7 @@ func UseAsDefault(manager *Manager) {
 	}
 }
 
-func CreateManager(config *Config, provider SessionProvider) *Manager {
+func CreateManager(config *Config, provider Provider) *Manager {
 	if config == nil {
 		config = new(Config)
 		config.ManagerName = "memory"
@@ -27,7 +27,7 @@ func CreateManager(config *Config, provider SessionProvider) *Manager {
 		config.MaxLifetime = 3600
 	}
 	if provider == nil {
-		provider = &memSessionProvider{
+		provider = &memoryProvider{
 			list: list.New(),
 			sessions: make(map[string]*list.Element),
 		}
