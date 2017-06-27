@@ -68,7 +68,7 @@ func (engine *ViewEngine) getDeep(file, parent string, t *template.Template) (*t
 	}
 	stat, err := os.Stat(fileAbsPath)
 	if err != nil || stat.IsDir() {
-		return nil, [][]string{}, fmt.Errorf("The partial view '%s' in '%s' canot be found", file, parent)
+		return nil, [][]string{}, fmt.Errorf("The partial view '%s' in '%s' cannot be found", file, parent)
 	}
 	data, err := ioutil.ReadFile(fileAbsPath)
 	if err != nil {
