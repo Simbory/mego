@@ -2,13 +2,15 @@ package handlers
 
 import (
 	"github.com/Simbory/mego"
+	"github.com/Simbory/mego/session"
 )
 
-func Init() {
-	mego.Get("/", home)
-	mego.Any("/views/*pathInfo", renderView)
-	mego.Get("/date/<year:int>-<month:int>-<day:int>", getDate)
-	mego.Get("/session", testSession)
-	mego.Get("/uuid", testUUID)
-	mego.Any("/filter/*pathInfo", testFilter)
+func Init(server *mego.Server) {
+	server.Get("/", home)
+	server.Any("/views/*pathInfo", renderView)
+	server.Get("/date/<year:int>-<month:int>-<day:int>", getDate)
+	server.Get("/session", testSession)
+	server.Get("/uuid", testUUID)
+	server.Any("/filter/*pathInfo", testFilter)
+	session.Default().RegisterType(&userModel{})
 }

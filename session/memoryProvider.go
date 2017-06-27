@@ -30,7 +30,7 @@ func (prov *memoryProvider) Read(sid string) Storage {
 	}
 	prov.lock.RUnlock()
 	prov.lock.Lock()
-	newStore := &memoryStorage{sid: sid, timeAccessed: time.Now(), value: make(map[interface{}]interface{})}
+	newStore := &memoryStorage{sid: sid, timeAccessed: time.Now(), value: make(map[string]interface{})}
 	element := prov.list.PushFront(newStore)
 	prov.sessions[sid] = element
 	prov.lock.Unlock()
@@ -62,7 +62,7 @@ func (prov *memoryProvider) Regenerate(oldSid, sid string) (Storage, error) {
 	}
 	prov.lock.RUnlock()
 	prov.lock.Lock()
-	newStore := &memoryStorage{sid: sid, timeAccessed: time.Now(), value: make(map[interface{}]interface{})}
+	newStore := &memoryStorage{sid: sid, timeAccessed: time.Now(), value: make(map[string]interface{})}
 	element := prov.list.PushFront(newStore)
 	prov.sessions[sid] = element
 	prov.lock.Unlock()

@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"strings"
 	"errors"
-	"path"
 	"sync"
 )
 
@@ -17,7 +16,7 @@ type routeSetting struct {
 	reqHandler ReqHandler
 }
 
-type webServer struct {
+type Server struct {
 	locked        bool
 	routing       *routeTree
 	initEvents    []func()
@@ -33,8 +32,8 @@ type webServer struct {
 	engineLock    *sync.RWMutex
 }
 
-func newServer() *webServer {
-	var s = &webServer{
+func NewServer(webRoot string) *Server {
+	var s = &Server{
 		locked: false,
 		routing: newRouteTree(),
 		initEvents: []func(){},
@@ -44,17 +43,19 @@ func newServer() *webServer {
 		err500Handler: handle500,
 		filters: make(filterContainer),
 		engineLock: &sync.RWMutex{},
+		maxFormSize: 32 << 20,
+		webRoot: webRoot,
 	}
 	return s
 }
 
-func (s *webServer) assertUnlocked() {
+func (s *Server) assertUnlocked() {
 	if s.locked {
-		panic(errors.New("The server is locked."))
+		panic(errors.New("The s is locked."))
 	}
 }
 
-func (s *webServer) addRoute(m, p string, h ReqHandler) {
+func (s *Server) addRoute(m, p string, h ReqHandler) {
 	s.routeSettings = append(s.routeSettings, &routeSetting{
 		method: m,
 		routePath: p,
@@ -62,15 +63,15 @@ func (s *webServer) addRoute(m, p string, h ReqHandler) {
 	})
 }
 
-func (s *webServer) onInit() {
-	if len(server.staticDirs) > 0 {
-		for pathPrefix := range server.staticDirs {
-			server.staticDirs[pathPrefix] = http.FileServer(http.Dir(MapPath(pathPrefix)))
+func (s *Server) onInit() {
+	if len(s.staticDirs) > 0 {
+		for pathPrefix := range s.staticDirs {
+			s.staticDirs[pathPrefix] = http.FileServer(http.Dir(s.MapPath(pathPrefix)))
 		}
 	}
-	if len(server.staticFiles) > 0 {
-		for u := range server.staticFiles {
-			server.staticFiles[u] = MapPath(u)
+	if len(s.staticFiles) > 0 {
+		for u := range s.staticFiles {
+			s.staticFiles[u] = s.MapPath(u)
 		}
 	}
 	if len(s.routeSettings) > 0 {
@@ -85,7 +86,7 @@ func (s *webServer) onInit() {
 	}
 }
 
-func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		rec := recover()
 		if rec == nil {
@@ -140,6 +141,7 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				req:       r,
 				res:       w,
 				routeData: routeData,
+				server:    s,
 			}
 			err := ctx.parseForm()
 			if err != nil {
@@ -159,7 +161,7 @@ func (s *webServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *webServer) flush(w http.ResponseWriter, req *http.Request, result interface{}) {
+func (s *Server) flush(w http.ResponseWriter, req *http.Request, result interface{}) {
 	switch result.(type) {
 	case Result:
 		result.(Result).ExecResult(w, req)
@@ -202,18 +204,12 @@ func (s *webServer) flush(w http.ResponseWriter, req *http.Request, result inter
 	}
 }
 
-func (s *webServer) mapPath(virtualPath string) string {
-	p := path.Join(s.webRoot, virtualPath)
-	p = path.Clean(strings.Replace(p, "\\", "/", -1))
-	return strings.TrimRight(p, "/")
-}
-
-func (s *webServer)initViewEngine() {
+func (s *Server)initViewEngine() {
 	if s.viewEngine == nil {
 		s.engineLock.Lock()
 		defer s.engineLock.Unlock()
 		if s.viewEngine == nil {
-			s.viewEngine = NewViewEngine("/views", ".html")
+			s.viewEngine = NewViewEngine(s.MapPath("views"), ".html")
 		}
 	}
 }

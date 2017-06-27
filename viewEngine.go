@@ -16,7 +16,7 @@ type ViewEngine struct {
 func (e *ViewEngine) Render(viewName string, data interface{}) Result {
 	if e.engine == nil {
 		func(e *ViewEngine) {
-			eg,err := views.NewEngine(MapPath(e.viewDir), e.viewExt)
+			eg,err := views.NewEngine(e.viewDir, e.viewExt)
 			if err != nil {
 				panic(err)
 			}
@@ -47,6 +47,10 @@ func NewViewEngine(viewDir, viewExt string) *ViewEngine {
 	if len(viewDir) == 0 {
 		panic(errors.New("The view directory cannot be empty"))
 	}
-	engine := &ViewEngine{engine: nil, viewDir: viewDir, viewExt: viewExt, viewFunc: make(template.FuncMap)}
-	return engine
+	return &ViewEngine{
+		engine: nil,
+		viewDir: viewDir,
+		viewExt: viewExt,
+		viewFunc: make(template.FuncMap),
+	}
 }

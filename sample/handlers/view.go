@@ -16,5 +16,5 @@ func renderView(ctx *mego.Context) interface{} {
 	viewData := map[string]interface{}{
 		"msg": msg,
 	}
-	return mego.View(ctx.RouteString("pathInfo"), viewData)
+	return ctx.ViewResult(ctx.RouteString("pathInfo"), viewData)
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 	"github.com/Simbory/mego"
 	"github.com/google/uuid"
+	"encoding/gob"
 )
 
 type Config struct {
@@ -158,14 +159,27 @@ func (manager *Manager) RegenerateID(ctx *mego.Context) (session Storage) {
 	return
 }
 
-func newSessionManager(config *Config, provider Provider) (*Manager, error) {
+func (manager *Manager) RegisterType(value interface{}) {
+	gob.Register(value)
+}
+
+func newSessionManager(server *mego.Server, config *Config, provider Provider) (*Manager, error) {
 	config.EnableSetCookie = true
 	if config.MaxLifetime == 0 {
 		config.MaxLifetime = config.GcLifetime
 	}
-	err := provider.Init(config.MaxLifetime, config.ProviderConfig)
-	if err != nil {
-		return nil, err
+	if server != nil {
+		server.OnStart(func() {
+			err := provider.Init(config.MaxLifetime, config.ProviderConfig)
+			if err != nil {
+				panic(err)
+			}
+		})
+	} else {
+		err := provider.Init(config.MaxLifetime, config.ProviderConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &Manager{
 		provider: provider,

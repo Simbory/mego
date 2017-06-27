@@ -11,12 +11,12 @@ import (
 type memoryStorage struct {
 	sid          string                      //session id
 	timeAccessed time.Time                   //last access Time
-	value        map[interface{}]interface{} //session store
+	value        map[string]interface{} //session store
 	lock         sync.RWMutex
 }
 
 // Set Value to memory session
-func (st *memoryStorage) Set(key, value interface{}) error {
+func (st *memoryStorage) Set(key string, value interface{}) error {
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	st.value[key] = value
@@ -24,7 +24,7 @@ func (st *memoryStorage) Set(key, value interface{}) error {
 }
 
 // Get Value from memory session by key
-func (st *memoryStorage) Get(key interface{}) interface{} {
+func (st *memoryStorage) Get(key string) interface{} {
 	st.lock.RLock()
 	defer st.lock.RUnlock()
 	if v, ok := st.value[key]; ok {
@@ -34,7 +34,7 @@ func (st *memoryStorage) Get(key interface{}) interface{} {
 }
 
 // Delete in memory session by key
-func (st *memoryStorage) Delete(key interface{}) error {
+func (st *memoryStorage) Delete(key string) error {
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	delete(st.value, key)
@@ -45,7 +45,7 @@ func (st *memoryStorage) Delete(key interface{}) error {
 func (st *memoryStorage) Flush() error {
 	st.lock.Lock()
 	defer st.lock.Unlock()
-	st.value = make(map[interface{}]interface{})
+	st.value = make(map[string]interface{})
 	return nil
 }
 

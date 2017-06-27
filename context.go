@@ -21,6 +21,7 @@ type Context struct {
 	routeData map[string]string
 	ended     bool
 	items     map[string]interface{}
+	server    *Server
 }
 
 // Request get the mego request
@@ -146,6 +147,9 @@ func (ctx *Context) RemoveItem(key string) interface{} {
 	delete(ctx.items, key)
 	return data
 }
+func (ctx *Context) MapPath(path string) string {
+	return ctx.server.MapPath(path)
+}
 
 // End end the mego context and stop the rest request function
 func (ctx *Context) End() {
@@ -170,7 +174,7 @@ func (ctx *Context) parseForm() error {
 				return err
 			}
 		}
-		f,err := reader.ReadForm(server.maxFormSize)
+		f,err := reader.ReadForm(ctx.server.maxFormSize)
 		if err != nil {
 			return err
 		}

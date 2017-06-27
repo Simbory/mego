@@ -7,7 +7,7 @@ import (
 	"runtime/debug"
 )
 
-// ErrHandler define the internal server error handler func
+// ErrHandler define the internal s error handler func
 type ErrHandler func(http.ResponseWriter, *http.Request, interface{})
 
 // handle404 the default error 404 handler

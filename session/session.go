@@ -3,12 +3,14 @@ package session
 import (
 	"container/list"
 	"errors"
+	"encoding/gob"
+	"github.com/Simbory/mego"
 )
 
 var defaultManager *Manager
 
-func UseDefault() {
-	defaultManager = CreateManager(nil, nil)
+func UseDefault(server *mego.Server) {
+	defaultManager = CreateManager(server,nil, nil)
 }
 
 // UseAsDefault use the given session manager as the default
@@ -18,7 +20,7 @@ func UseAsDefault(manager *Manager) {
 	}
 }
 
-func CreateManager(config *Config, provider Provider) *Manager {
+func CreateManager(server *mego.Server, config *Config, provider Provider) *Manager {
 	if config == nil {
 		config = new(Config)
 		config.ManagerName = "memory"
@@ -32,7 +34,7 @@ func CreateManager(config *Config, provider Provider) *Manager {
 			sessions: make(map[string]*list.Element),
 		}
 	}
-	m, err := newSessionManager(config.ManagerName, config, provider)
+	m, err := newSessionManager(server, config, provider)
 	if err != nil {
 		panic(err)
 	}
@@ -45,4 +47,16 @@ func Default() *Manager {
 		panic(errors.New("You need to call UseDefault() first when you get the default session manager"))
 	}
 	return defaultManager
+}
+
+func NewMemoryProvider() Provider {
+	return &memoryProvider{
+		list: list.New(),
+		sessions: make(map[string]*list.Element),
+	}
+}
+
+func NewDiskProvider(dir string) Provider {
+	gob.Register(&diskValue{})
+	return &diskProvider{savePath: dir}
 }

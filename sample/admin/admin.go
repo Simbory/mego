@@ -11,7 +11,7 @@ func getUpload(_ *mego.Context) interface{} {
 
 func postUpload(ctx *mego.Context) interface{} {
 	file := ctx.PostFile("file")
-	filePath := mego.MapPath(file.FileName)
+	filePath := ctx.MapPath(file.FileName)
 	err := file.SaveAndClose(filePath)
 	if err != nil {
 		panic(err)
@@ -19,11 +19,12 @@ func postUpload(ctx *mego.Context) interface{} {
 	return fmt.Sprintf("file Size: %d", file.Size)
 }
 
-var area = mego.GetArea("admin")
+var area *mego.Area
 var view *mego.ViewEngine
 
-func Init() {
+func Init(server *mego.Server) {
+	area = server.GetArea("admin")
 	area.Get("upload", getUpload)
 	area.Post("upload", postUpload)
-	view = mego.NewViewEngine(area.Key() + "/views", ".html")
+	view = mego.NewViewEngine(server.MapPath(area.Key() + "/views"), ".html")
 }

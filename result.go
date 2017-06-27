@@ -130,12 +130,12 @@ func NewResult() *ContentResult {
 }
 
 // Content generate the mego content result
-func Content(data interface{}, cntType string) Result {
+func (ctx *Context) ContentResult(data interface{}, contentType string) Result {
 	var resp = NewResult()
-	if len(cntType) < 1 {
+	if len(contentType) < 1 {
 		resp.ContentType = "text/plain"
 	} else {
-		resp.ContentType = cntType
+		resp.ContentType = contentType
 	}
 	switch data.(type) {
 	case string:
@@ -150,32 +150,32 @@ func Content(data interface{}, cntType string) Result {
 	return resp
 }
 
-// PlainText generate the mego result as plain text
-func PlainText(content string) Result {
-	return Content(content, "text/plain; charset=utf-8")
+// TextResult generate the mego result as plain text
+func (ctx *Context) TextResult(content string) Result {
+	return ctx.ContentResult(content, "text/plain; charset=utf-8")
 }
 
-// Javascript generate the mego result as javascript code
-func Javascript(code string) Result {
-	return Content(code, "text/javascript; charset=utf-8")
+// JsResult generate the mego result as javascript code
+func (ctx *Context) JsResult(code string) Result {
+	return ctx.ContentResult(code, "text/javascript; charset=utf-8")
 }
 
-// CSS generate the mego result as CSS code
-func CSS(code string) Result {
-	return Content(code, "text/css; charset=utf-8")
+// CssResult generate the mego result as CSS code
+func (ctx *Context) CssResult(code string) Result {
+	return ctx.ContentResult(code, "text/css; charset=utf-8")
 }
 
-// JSON generate the mego result as JSON string
-func JSON(data interface{}) Result {
+// JsonResult generate the mego result as JSON string
+func (ctx *Context) JsonResult(data interface{}) Result {
 	dataJSON, err := json.Marshal(data)
 	if err != nil {
 		panic(err)
 	}
-	return Content(byte2Str(dataJSON), "application/json; charset=utf-8")
+	return ctx.ContentResult(byte2Str(dataJSON), "application/json; charset=utf-8")
 }
 
-// JSONP generate the mego result as jsonp string
-func JSONP(data interface{}, callback string) Result {
+// JsonpResult generate the mego result as jsonp string
+func (ctx *Context) JsonpResult(data interface{}, callback string) Result {
 	reg := regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
 	if !reg.Match(str2Byte(callback)) {
 		panic(fmt.Errorf("Invalid JSONP callback name %s", callback))
@@ -184,20 +184,20 @@ func JSONP(data interface{}, callback string) Result {
 	if err != nil {
 		panic(err)
 	}
-	return Content(strAdd(callback, "(", byte2Str(dataJSON), ");"), "text/javascript; charset=utf-8")
+	return ctx.ContentResult(strAdd(callback, "(", byte2Str(dataJSON), ");"), "text/javascript; charset=utf-8")
 }
 
-// XML generate the mego result as XML string
-func XML(data interface{}) Result {
+// XmlResult generate the mego result as XML string
+func (ctx *Context) XmlResult (data interface{}) Result {
 	xmlBytes, err := xml.Marshal(data)
 	if err != nil {
 		panic(err)
 	}
-	return Content(byte2Str(xmlBytes), "text/xml; charset=utf-8")
+	return ctx.ContentResult(byte2Str(xmlBytes), "text/xml; charset=utf-8")
 }
 
-// File generate the mego result as file result
-func File(path string, contentType string) Result {
+// FileResult generate the mego result as file result
+func (ctx *Context) FileResult(path string, contentType string) Result {
 	var resp = &FileResult{
 		FilePath:    path,
 		ContentType: contentType,
@@ -205,9 +205,10 @@ func File(path string, contentType string) Result {
 	return resp
 }
 
-func View(viewName string, data interface{}) Result {
-	server.initViewEngine()
-	return server.viewEngine.Render(viewName, data)
+// ViewResult find the view by view name, execute the view template and get the result
+func (ctx *Context) ViewResult (viewName string, data interface{}) Result {
+	ctx.server.initViewEngine()
+	return ctx.server.viewEngine.Render(viewName, data)
 }
 
 func redirect(url string, statusCode int) *RedirectResult {
@@ -219,11 +220,11 @@ func redirect(url string, statusCode int) *RedirectResult {
 }
 
 // Redirect redirect as 302 status code
-func Redirect(url string) Result {
+func (ctx *Context) Redirect(url string) Result {
 	return redirect(url, 302)
 }
 
 // RedirectPermanent redirect as 301 status
-func RedirectPermanent(url string) Result {
+func (ctx *Context) RedirectPermanent(url string) Result {
 	return redirect(url, 301)
 }

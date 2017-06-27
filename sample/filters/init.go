@@ -2,6 +2,6 @@ package filters
 
 import "github.com/Simbory/mego"
 
-func Init() {
-	mego.HandleFilter("/*", globalFilter)
+func Init(server *mego.Server) {
+	server.HandleFilter("/*", globalFilter)
 }

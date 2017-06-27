@@ -2,6 +2,6 @@ package handlers
 
 import "github.com/Simbory/mego"
 
-func home(_ *mego.Context) interface{} {
-	return mego.View("home", nil)
+func home(ctx *mego.Context) interface{} {
+	return ctx.ViewResult("home", nil)
 }

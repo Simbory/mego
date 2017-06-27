@@ -8,7 +8,7 @@ import (
 
 type Area struct {
 	pathPrefix string
-	server *webServer
+	server *Server
 	viewEngine *ViewEngine
 	engineLock *sync.RWMutex
 }
@@ -20,7 +20,7 @@ func (a *Area) Key() string {
 
 // Dir get the physical directory of the current area
 func (a *Area) Dir() string {
-	return server.mapPath(a.pathPrefix)
+	return a.server.MapPath(a.pathPrefix)
 }
 
 // Get used to register router for GET method
@@ -95,7 +95,7 @@ func (a *Area) initViewEngine() {
 		a.engineLock.Lock()
 		defer a.engineLock.Unlock()
 		if a.viewEngine == nil {
-			a.viewEngine = NewViewEngine(a.Key()+"/views", ".html")
+			a.viewEngine = NewViewEngine(a.server.MapPath(a.Key() + "/views"), ".html")
 		}
 	}
 }
