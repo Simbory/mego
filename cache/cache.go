@@ -127,25 +127,31 @@ func (c *Manager) Remove(name string) {
 	c.locker.Unlock()
 }
 
+func (c *Manager) gc() {
+	var now = time.Now()
+	for name, data := range c.dataMap {
+		if now.Before(data.expire) {
+			c.locker.Lock()
+			delete(c.dataMap, name)
+			c.locker.Unlock()
+		}
+	}
+	c.timer = time.AfterFunc(c.gcInterval, func() {
+		c.gc()
+	})
+}
+
 // start init the fswatcher and start the gc lifecycle
 func (c *Manager) start() {
 	if c.started || c.fileWatcher == nil {
 		return
+	} else {
+		c.started = true
+		c.fileWatcher.Start()
+		c.fileWatcher.AddHandler(&fileHandler{cacheManager: c})
 	}
-	c.started = true
-	c.fileWatcher.Start()
-	c.fileWatcher.AddHandler(&fileHandler{cacheManager: c})
 	// start the cache gc lifecycle
-	c.timer = time.AfterFunc(c.gcInterval, func(){
-		var now = time.Now()
-		for name, data := range c.dataMap {
-			if now.Before(data.expire) {
-				c.locker.Lock()
-				delete(c.dataMap, name)
-				c.locker.Unlock()
-			}
-		}
-	})
+	c.gc()
 }
 
 func (c *Manager) Stop() {
