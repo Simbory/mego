@@ -10,13 +10,10 @@ import (
 )
 
 func main() {
-	server := mego.NewServer(mego.WorkingDir())
-
-	server.HandleDir("/static/")
-	server.HandleFile("/favicon.ico")
+	server := mego.NewServer(mego.WorkingDir(), ":8080", 0, "")
 
 	cache.UseDefault()
-	provider := session.NewDiskProvider(server.MapPath("/temp/sessions"))
+	provider := session.NewDiskProvider(server.MapWebRoot("/temp/sessions"))
 	mgr := session.CreateManager(server,nil, provider)
 	session.UseAsDefault(mgr)
 
@@ -24,5 +21,5 @@ func main() {
 	filters.Init(server)
 	admin.Init(server)
 
-	server.Run(":8080")
+	server.Run()
 }

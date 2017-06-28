@@ -15,6 +15,11 @@ type Result interface {
 	ExecResult(w http.ResponseWriter, r *http.Request)
 }
 
+type emptyResult struct {}
+
+func (er *emptyResult) ExecResult(w http.ResponseWriter, r *http.Request) {
+}
+
 // FileResult the file result
 type FileResult struct {
 	ContentType string

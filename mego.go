@@ -11,12 +11,12 @@ import (
 )
 
 // AssertUnlocked make sure the function only can be called just before the s is running
-func (s *Server)AssertUnlocked() {
+func (s *Server) AssertUnlocked() {
 	s.assertUnlocked()
 }
 
 // OnStart attach an event handler to the s start event
-func (s *Server)OnStart(h func()) {
+func (s *Server) OnStart(h func()) {
 	s.AssertUnlocked()
 	if h != nil {
 		s.initEvents = append(s.initEvents, h)
@@ -24,7 +24,7 @@ func (s *Server)OnStart(h func()) {
 }
 
 // AddRouteFunc add route validation func
-func (s *Server)AddRouteFunc(name string, fun RouteFunc) {
+func (s *Server) AddRouteFunc(name string, fun RouteFunc) {
 	s.AssertUnlocked()
 	reg := regexp.MustCompile("^[a-zA-Z][\\w]*$")
 	if !reg.Match([]byte(name)) {
@@ -34,61 +34,61 @@ func (s *Server)AddRouteFunc(name string, fun RouteFunc) {
 }
 
 // Get used to register router for GET method
-func (s *Server)Get(routePath string, handler ReqHandler) {
+func (s *Server) Get(routePath string, handler ReqHandler) {
 	s.AssertUnlocked()
 	s.addRoute("GET", routePath, handler)
 }
 
 // Post used to register router for POST method
-func (s *Server)Post(routePath string, handler ReqHandler) {
+func (s *Server) Post(routePath string, handler ReqHandler) {
 	s.AssertUnlocked()
 	s.addRoute("POST", routePath, handler)
 }
 
 // Put used to register router for PUT method
-func (s *Server)Put(routePath string, handler ReqHandler) {
+func (s *Server) Put(routePath string, handler ReqHandler) {
 	s.AssertUnlocked()
 	s.addRoute("PUT", routePath, handler)
 }
 
 // Options used to register router for OPTIONS method
-func (s *Server)Options(routePath string, handler ReqHandler) {
+func (s *Server) Options(routePath string, handler ReqHandler) {
 	s.AssertUnlocked()
 	s.addRoute("OPTIONS", routePath, handler)
 }
 
 // Head used to register router for HEAD method
-func (s *Server)Head(routePath string, handler ReqHandler) {
+func (s *Server) Head(routePath string, handler ReqHandler) {
 	s.AssertUnlocked()
 	s.addRoute("HEAD", routePath, handler)
 }
 
 // Delete used to register router for DELETE method
-func (s *Server)Delete(routePath string, handler ReqHandler) {
+func (s *Server) Delete(routePath string, handler ReqHandler) {
 	s.AssertUnlocked()
 	s.addRoute("DELETE", routePath, handler)
 }
 
 // Trace used to register router for TRACE method
-func (s *Server)Trace(routePath string, handler ReqHandler) {
+func (s *Server) Trace(routePath string, handler ReqHandler) {
 	s.AssertUnlocked()
 	s.addRoute("TRACE", routePath, handler)
 }
 
 // Connect used to register router for CONNECT method
-func (s *Server)Connect(routePath string, handler ReqHandler) {
+func (s *Server) Connect(routePath string, handler ReqHandler) {
 	s.AssertUnlocked()
 	s.addRoute("CONNECT", routePath, handler)
 }
 
 // Any used to register router for all methods
-func (s *Server)Any(routePath string, handler ReqHandler) {
+func (s *Server) Any(routePath string, handler ReqHandler) {
 	s.AssertUnlocked()
 	s.addRoute("*", routePath, handler)
 }
 
 // GetArea get or create the mego area
-func (s *Server)GetArea(pathPrefix string) *Area {
+func (s *Server) GetArea(pathPrefix string) *Area {
 	prefix := strings.Trim(pathPrefix, "/")
 	prefix = strings.Trim(prefix, "\\")
 	reg := regexp.MustCompile("[/a-zA-Z0-9_-]+")
@@ -102,46 +102,48 @@ func (s *Server)GetArea(pathPrefix string) *Area {
 	}
 }
 
-// MapPath Returns the physical file path that corresponds to the specified virtual path.
+// MapWebRoot Returns the physical file path that corresponds to the specified virtual path.
 // @param virtualPath: the virtual path starts with
 // @return the absolute file path
-func (s *Server)MapPath(virtualPath string) string {
+func (s *Server) MapWebRoot(virtualPath string) string {
 	p := path.Join(s.webRoot, virtualPath)
-	p = path.Clean(strings.Replace(p, "\\", "/", -1))
-	return strings.TrimRight(p, "/")
+	return path.Clean(strings.Replace(p, "\\", "/", -1))
 }
 
-// HandleDir handle static directory
-func (s *Server)HandleDir(pathPrefix string) {
-	s.AssertUnlocked()
-	if len(pathPrefix) == 0 {
-		panic(errors.New("The parameter 'pathPrefix' cannot be empty"))
-	}
-	if !strings.HasPrefix(pathPrefix, "/") {
-		pathPrefix = "/" + pathPrefix
-	}
-	if !strings.HasSuffix(pathPrefix, "/") {
-		pathPrefix = pathPrefix + "/"
-	}
-	s.staticDirs[pathPrefix] = nil
-}
-
-// HandleFile handle the url as static file
-func (s *Server)HandleFile(url string) {
-	s.AssertUnlocked()
-	s.staticFiles[url] = ""
+// MapContentRoot Returns the physical file path that corresponds to the specified virtual path.
+// @param virtualPath: the virtual path starts with
+// @return the absolute file path
+func (s *Server) MapContentRoot(virtualPath string) string {
+	p := path.Join(s.contentRoot, virtualPath)
+	return path.Clean(strings.Replace(p, "\\", "/", -1))
 }
 
 // Handle404 set custom error handler for status code 404
-func (s *Server)Handle404(h http.HandlerFunc) {
+func (s *Server) Handle404(h http.HandlerFunc) {
 	s.AssertUnlocked()
 	if h != nil {
 		s.err404Handler = h
 	}
 }
 
+// Handle404 set custom error handler for status code 404
+func (s *Server) Handle400(h http.HandlerFunc) {
+	s.AssertUnlocked()
+	if h != nil {
+		s.err400Handler = h
+	}
+}
+
+// Handle404 set custom error handler for status code 404
+func (s *Server) Handle403(h http.HandlerFunc) {
+	s.AssertUnlocked()
+	if h != nil {
+		s.err403Handler = h
+	}
+}
+
 // Handle500 set custom error handler for status code 500
-func (s *Server)Handle500(h func(http.ResponseWriter, *http.Request, interface{})) {
+func (s *Server) Handle500(h func(http.ResponseWriter, *http.Request, interface{})) {
 	s.AssertUnlocked()
 	if h != nil {
 		s.err500Handler = h
@@ -151,7 +153,7 @@ func (s *Server)Handle500(h func(http.ResponseWriter, *http.Request, interface{}
 // HandleFilter handle the path
 // the path prefix ends with char '*', the filter will be available for all urls that
 // starts with pathPrefix. Otherwise, the filter only be available for the featured url
-func (s *Server)HandleFilter(pathPrefix string, h func(*Context)) error {
+func (s *Server) HandleFilter(pathPrefix string, h func(*Context)) error {
 	s.AssertUnlocked()
 	if len(pathPrefix) == 0 {
 		return errors.New("The parameter 'pathPrefix' cannot be empty")
@@ -183,18 +185,18 @@ func (s *Server)ExtendView(name string, f interface{}) {
 }
 
 // Run run the application as http
-func (s *Server)Run(addr string) {
+func (s *Server)Run() {
 	s.onInit()
-	err := http.ListenAndServe(addr, s)
+	err := http.ListenAndServe(s.addr, s)
 	if err != nil {
 		panic(err)
 	}
 }
 
 // RunTLS run the application as https
-func (s *Server)RunTLS(addr, certFile, keyFile string) {
+func (s *Server)RunTLS(certFile, keyFile string) {
 	s.onInit()
-	err := http.ListenAndServeTLS(addr, certFile, keyFile, s)
+	err := http.ListenAndServeTLS(s.addr, certFile, keyFile, s)
 	if err != nil {
 		panic(err)
 	}

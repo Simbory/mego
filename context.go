@@ -148,7 +148,7 @@ func (ctx *Context) RemoveItem(key string) interface{} {
 	return data
 }
 func (ctx *Context) MapPath(path string) string {
-	return ctx.server.MapPath(path)
+	return ctx.server.MapWebRoot(path)
 }
 
 // End end the mego context and stop the rest request function
@@ -156,11 +156,8 @@ func (ctx *Context) End() {
 	ctx.ended = true
 }
 
-// ParseForm parse the post form (both multipart and normal form)
+// parseForm parse the post form (both multipart and normal form)
 func (ctx *Context) parseForm() error {
-	if ctx.req.Method != "POST" && ctx.req.Method != "PUT" && ctx.req.Method != "PATCH" {
-		return nil
-	}
 	isMultipart, reader, err := ctx.multipart()
 	if err != nil {
 		return err
