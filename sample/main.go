@@ -14,7 +14,7 @@ func main() {
 	server := mego.NewServer(mego.WorkingDir(), ":8080", 0, "")
 
 	cache.UseDefault()
-	provider := disk.NewProvider(server.MapWebRoot("/temp/sessions"))
+	provider := disk.NewProvider(server.MapRootPath("/temp/sessions"))
 	mgr := session.CreateManager(server,nil, provider)
 	session.UseAsDefault(mgr)
 

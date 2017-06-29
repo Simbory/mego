@@ -9,6 +9,7 @@ import (
 	"errors"
 	"sync"
 	"path"
+	"os"
 )
 
 type routeSetting struct {
@@ -98,7 +99,20 @@ func (s *Server) onInit() {
 }
 
 func (s *Server) processStaticRequest(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, s.MapContentRoot(r.URL.Path))
+	filePath := s.MapContentPath(r.URL.Path)
+	stat,err := os.Stat(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			s.err404Handler(w, r)
+		} else {
+			s.err403Handler(w, r)
+		}
+		return
+	}
+	if stat.IsDir() {
+		filePath += "/index.html"
+	}
+	http.ServeFile(w, r, filePath)
 }
 
 func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, urlPath string) interface{} {
@@ -187,7 +201,7 @@ func (s *Server) initViewEngine() {
 		s.engineLock.Lock()
 		defer s.engineLock.Unlock()
 		if s.viewEngine == nil {
-			s.viewEngine = NewViewEngine(s.MapWebRoot("views"), ".html")
+			s.viewEngine = NewViewEngine(s.MapRootPath("views"), ".html")
 		}
 	}
 }

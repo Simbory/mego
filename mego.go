@@ -102,18 +102,18 @@ func (s *Server) GetArea(pathPrefix string) *Area {
 	}
 }
 
-// MapWebRoot Returns the physical file path that corresponds to the specified virtual path.
+// MapRootPath Returns the physical file path that corresponds to the specified virtual path.
 // @param virtualPath: the virtual path starts with
 // @return the absolute file path
-func (s *Server) MapWebRoot(virtualPath string) string {
+func (s *Server) MapRootPath(virtualPath string) string {
 	p := path.Join(s.webRoot, virtualPath)
 	return path.Clean(strings.Replace(p, "\\", "/", -1))
 }
 
-// MapContentRoot Returns the physical file path that corresponds to the specified virtual path.
+// MapContentPath Returns the physical file path that corresponds to the specified virtual path.
 // @param virtualPath: the virtual path starts with
 // @return the absolute file path
-func (s *Server) MapContentRoot(virtualPath string) string {
+func (s *Server) MapContentPath(virtualPath string) string {
 	p := path.Join(s.contentRoot, virtualPath)
 	return path.Clean(strings.Replace(p, "\\", "/", -1))
 }

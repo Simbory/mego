@@ -148,7 +148,7 @@ func (ctx *Context) RemoveItem(key string) interface{} {
 	return data
 }
 func (ctx *Context) MapPath(path string) string {
-	return ctx.server.MapWebRoot(path)
+	return ctx.server.MapRootPath(path)
 }
 
 // End end the mego context and stop the rest request function

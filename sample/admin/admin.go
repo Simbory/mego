@@ -26,5 +26,5 @@ func Init(server *mego.Server) {
 	area = server.GetArea("admin")
 	area.Get("upload", getUpload)
 	area.Post("upload", postUpload)
-	view = mego.NewViewEngine(server.MapWebRoot(area.Key() + "/views"), ".html")
+	view = mego.NewViewEngine(server.MapRootPath(area.Key() + "/views"), ".html")
 }

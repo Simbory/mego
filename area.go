@@ -20,7 +20,7 @@ func (a *Area) Key() string {
 
 // Dir get the physical directory of the current area
 func (a *Area) Dir() string {
-	return a.server.MapWebRoot(a.pathPrefix)
+	return a.server.MapRootPath(a.pathPrefix)
 }
 
 // Get used to register router for GET method
@@ -95,7 +95,7 @@ func (a *Area) initViewEngine() {
 		a.engineLock.Lock()
 		defer a.engineLock.Unlock()
 		if a.viewEngine == nil {
-			a.viewEngine = NewViewEngine(a.server.MapWebRoot(a.Key() + "/views"), ".html")
+			a.viewEngine = NewViewEngine(a.server.MapRootPath(a.Key() + "/views"), ".html")
 		}
 	}
 }
