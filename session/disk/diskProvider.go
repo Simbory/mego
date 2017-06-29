@@ -1,4 +1,4 @@
-package session
+package disk
 
 import (
 	"sync"
@@ -8,23 +8,23 @@ import (
 	"io/ioutil"
 	"strings"
 	"path"
-	"errors"
+	"github.com/simbory/mego/session"
+	"encoding/gob"
+	"github.com/simbory/mego/assert"
 )
 
-// memoryProvider Implement the provider interface
-type diskProvider struct {
-	lock        sync.RWMutex            // locker
-	sessions    map[string]*diskStorage // map in memory
+// provider Implement the provider interface
+type provider struct {
+	lock        sync.RWMutex        // locker
+	sessions    map[string]*storage // map in memory
 	maxLifetime int64
 	savePath    string
 }
 
-// Init init memory session
-func (prov *diskProvider) Init(maxLifeTime int64, _ string) error {
+// Init init the current session provider
+func (prov *provider) Init(maxLifeTime int64, _ string) error {
 	prov.savePath = path.Clean(strings.Replace(prov.savePath, "\\", "/", -1))
-	if len(prov.savePath) == 0 {
-		return errors.New("Invalid session provider folder: the 'savePath' cannot be empty.")
-	}
+	assert.NotEmpty("savePath", prov.savePath)
 	stat,err := os.Stat(prov.savePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -34,12 +34,12 @@ func (prov *diskProvider) Init(maxLifeTime int64, _ string) error {
 		}
 	} else {
 		if !stat.IsDir() {
-			fmt.Errorf("Invalid session provider folder: %s", prov.savePath)
+			return fmt.Errorf("Invalid session provider folder: %s", prov.savePath)
 		}
 	}
 	prov.maxLifetime = maxLifeTime
 	prov.savePath = prov.savePath
-	prov.sessions = make(map[string]*diskStorage)
+	prov.sessions = make(map[string]*storage)
 
 	infos,err := ioutil.ReadDir(prov.savePath)
 	if err != nil {
@@ -64,8 +64,8 @@ func (prov *diskProvider) Init(maxLifeTime int64, _ string) error {
 	return nil
 }
 
-func (prov *diskProvider) newStorage(sid string) *diskStorage {
-	newStore := &diskStorage{
+func (prov *provider) newStorage(sid string) *storage {
+	newStore := &storage{
 		sid: sid,
 		timeAccessed: time.Now(),
 		value: nil,
@@ -76,7 +76,7 @@ func (prov *diskProvider) newStorage(sid string) *diskStorage {
 }
 
 // Read get memory session store by sid
-func (prov *diskProvider) Read(sid string) Storage {
+func (prov *provider) Read(sid string) session.Storage {
 	prov.lock.RLock()
 	if element, ok := prov.sessions[sid]; ok {
 		go prov.Update(sid)
@@ -91,7 +91,7 @@ func (prov *diskProvider) Read(sid string) Storage {
 }
 
 // Exist check session store exist in memory session by sid
-func (prov *diskProvider) Exist(sid string) bool {
+func (prov *provider) Exist(sid string) bool {
 	prov.lock.RLock()
 	defer prov.lock.RUnlock()
 	if _, ok := prov.sessions[sid]; ok {
@@ -101,7 +101,7 @@ func (prov *diskProvider) Exist(sid string) bool {
 }
 
 // Regenerate generate new sid for session store in session
-func (prov *diskProvider) Regenerate(oldSid, sid string) (Storage, error) {
+func (prov *provider) Regenerate(oldSid, sid string) (session.Storage, error) {
 	prov.lock.RLock()
 	if element, ok := prov.sessions[oldSid]; ok {
 		go prov.Update(oldSid)
@@ -124,7 +124,7 @@ func (prov *diskProvider) Regenerate(oldSid, sid string) (Storage, error) {
 }
 
 // Destroy delete session store in session by id
-func (prov *diskProvider) Destroy(sid string) error {
+func (prov *provider) Destroy(sid string) error {
 	prov.lock.Lock()
 	defer prov.lock.Unlock()
 	if element, ok := prov.sessions[sid]; ok {
@@ -136,12 +136,12 @@ func (prov *diskProvider) Destroy(sid string) error {
 }
 
 // All get count number of memory session
-func (prov *diskProvider) All() int {
+func (prov *provider) All() int {
 	return len(prov.sessions)
 }
 
 // Update expand Time of session store by id in memory session
-func (prov *diskProvider) Update(sid string) error {
+func (prov *provider) Update(sid string) error {
 	prov.lock.Lock()
 	defer prov.lock.Unlock()
 	if element, ok := prov.sessions[sid]; ok {
@@ -152,7 +152,7 @@ func (prov *diskProvider) Update(sid string) error {
 }
 
 // GC clean expired session stores in memory session
-func (prov *diskProvider) GC() {
+func (prov *provider) GC() {
 	prov.lock.RLock()
 	for _, element := range prov.sessions {
 		if element == nil {
@@ -170,4 +170,9 @@ func (prov *diskProvider) GC() {
 		}
 	}
 	prov.lock.RUnlock()
+}
+
+func NewProvider(dir string) session.Provider {
+	gob.RegisterName("__session_value", &storage_value{})
+	return &provider{savePath: dir}
 }

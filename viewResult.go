@@ -2,7 +2,7 @@ package mego
 
 import (
 	"net/http"
-	"github.com/Simbory/mego/views"
+	"github.com/simbory/mego/views"
 )
 
 type viewResult struct {

@@ -1,13 +1,14 @@
-package session
+package memory
 
 import (
 	"sync"
 	"container/list"
 	"time"
+	"github.com/simbory/mego/session"
 )
 
-// memoryProvider Implement the provider interface
-type memoryProvider struct {
+// provider Implement the provider interface
+type provider struct {
 	lock        sync.RWMutex             // locker
 	sessions    map[string]*list.Element // map in memory
 	list        *list.List               // for gc
@@ -15,22 +16,22 @@ type memoryProvider struct {
 }
 
 // Init init memory session
-func (prov *memoryProvider) Init(maxLifeTime int64, savePath string) error {
+func (prov *provider) Init(maxLifeTime int64, savePath string) error {
 	prov.maxLifetime = maxLifeTime
 	return nil
 }
 
 // Read get memory session store by sid
-func (prov *memoryProvider) Read(sid string) Storage {
+func (prov *provider) Read(sid string) session.Storage {
 	prov.lock.RLock()
 	if element, ok := prov.sessions[sid]; ok {
 		go prov.Update(sid)
 		prov.lock.RUnlock()
-		return element.Value.(*memoryStorage)
+		return element.Value.(*storage)
 	}
 	prov.lock.RUnlock()
 	prov.lock.Lock()
-	newStore := &memoryStorage{sid: sid, timeAccessed: time.Now(), value: make(map[string]interface{})}
+	newStore := &storage{sid: sid, timeAccessed: time.Now(), value: make(map[string]interface{})}
 	element := prov.list.PushFront(newStore)
 	prov.sessions[sid] = element
 	prov.lock.Unlock()
@@ -38,7 +39,7 @@ func (prov *memoryProvider) Read(sid string) Storage {
 }
 
 // Exist check session store exist in memory session by sid
-func (prov *memoryProvider) Exist(sid string) bool {
+func (prov *provider) Exist(sid string) bool {
 	prov.lock.RLock()
 	defer prov.lock.RUnlock()
 	if _, ok := prov.sessions[sid]; ok {
@@ -48,21 +49,21 @@ func (prov *memoryProvider) Exist(sid string) bool {
 }
 
 // Regenerate generate new sid for session store in memory session
-func (prov *memoryProvider) Regenerate(oldSid, sid string) (Storage, error) {
+func (prov *provider) Regenerate(oldSid, sid string) (session.Storage, error) {
 	prov.lock.RLock()
 	if element, ok := prov.sessions[oldSid]; ok {
 		go prov.Update(oldSid)
 		prov.lock.RUnlock()
 		prov.lock.Lock()
-		element.Value.(*memoryStorage).sid = sid
+		element.Value.(*storage).sid = sid
 		prov.sessions[sid] = element
 		delete(prov.sessions, oldSid)
 		prov.lock.Unlock()
-		return element.Value.(*memoryStorage), nil
+		return element.Value.(*storage), nil
 	}
 	prov.lock.RUnlock()
 	prov.lock.Lock()
-	newStore := &memoryStorage{sid: sid, timeAccessed: time.Now(), value: make(map[string]interface{})}
+	newStore := &storage{sid: sid, timeAccessed: time.Now(), value: make(map[string]interface{})}
 	element := prov.list.PushFront(newStore)
 	prov.sessions[sid] = element
 	prov.lock.Unlock()
@@ -70,7 +71,7 @@ func (prov *memoryProvider) Regenerate(oldSid, sid string) (Storage, error) {
 }
 
 // Destroy delete session store in memory session by id
-func (prov *memoryProvider) Destroy(sid string) error {
+func (prov *provider) Destroy(sid string) error {
 	prov.lock.Lock()
 	defer prov.lock.Unlock()
 	if element, ok := prov.sessions[sid]; ok {
@@ -82,16 +83,16 @@ func (prov *memoryProvider) Destroy(sid string) error {
 }
 
 // All get count number of memory session
-func (prov *memoryProvider) All() int {
+func (prov *provider) All() int {
 	return prov.list.Len()
 }
 
 // Update expand Time of session store by id in memory session
-func (prov *memoryProvider) Update(sid string) error {
+func (prov *provider) Update(sid string) error {
 	prov.lock.Lock()
 	defer prov.lock.Unlock()
 	if element, ok := prov.sessions[sid]; ok {
-		element.Value.(*memoryStorage).timeAccessed = time.Now()
+		element.Value.(*storage).timeAccessed = time.Now()
 		prov.list.MoveToFront(element)
 		return nil
 	}
@@ -99,18 +100,18 @@ func (prov *memoryProvider) Update(sid string) error {
 }
 
 // GC clean expired session stores in memory session
-func (prov *memoryProvider) GC() {
+func (prov *provider) GC() {
 	prov.lock.RLock()
 	for {
 		element := prov.list.Back()
 		if element == nil {
 			break
 		}
-		if (element.Value.(*memoryStorage).timeAccessed.Unix() + prov.maxLifetime) < time.Now().Unix() {
+		if (element.Value.(*storage).timeAccessed.Unix() + prov.maxLifetime) < time.Now().Unix() {
 			prov.lock.RUnlock()
 			prov.lock.Lock()
 			prov.list.Remove(element)
-			delete(prov.sessions, element.Value.(*memoryStorage).sid)
+			delete(prov.sessions, element.Value.(*storage).sid)
 			prov.lock.Unlock()
 			prov.lock.RLock()
 		} else {
@@ -118,4 +119,11 @@ func (prov *memoryProvider) GC() {
 		}
 	}
 	prov.lock.RUnlock()
+}
+
+func NewProvider() session.Provider {
+	return &provider{
+		list: list.New(),
+		sessions: make(map[string]*list.Element),
+	}
 }

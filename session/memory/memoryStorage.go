@@ -1,4 +1,4 @@
-package session
+package memory
 
 import (
 	"time"
@@ -6,9 +6,9 @@ import (
 	"net/http"
 )
 
-// memoryStorage memory session store.
+// storage memory session store.
 // it saved sessions in a map in memory.
-type memoryStorage struct {
+type storage struct {
 	sid          string                      //session id
 	timeAccessed time.Time                   //last access Time
 	value        map[string]interface{} //session store
@@ -16,7 +16,7 @@ type memoryStorage struct {
 }
 
 // Set Value to memory session
-func (st *memoryStorage) Set(key string, value interface{}) error {
+func (st *storage) Set(key string, value interface{}) error {
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	st.value[key] = value
@@ -24,7 +24,7 @@ func (st *memoryStorage) Set(key string, value interface{}) error {
 }
 
 // Get Value from memory session by key
-func (st *memoryStorage) Get(key string) interface{} {
+func (st *storage) Get(key string) interface{} {
 	st.lock.RLock()
 	defer st.lock.RUnlock()
 	if v, ok := st.value[key]; ok {
@@ -34,7 +34,7 @@ func (st *memoryStorage) Get(key string) interface{} {
 }
 
 // Delete in memory session by key
-func (st *memoryStorage) Delete(key string) error {
+func (st *storage) Delete(key string) error {
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	delete(st.value, key)
@@ -42,7 +42,7 @@ func (st *memoryStorage) Delete(key string) error {
 }
 
 // Flush clear all values in memory session
-func (st *memoryStorage) Flush() error {
+func (st *storage) Flush() error {
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	st.value = make(map[string]interface{})
@@ -50,11 +50,11 @@ func (st *memoryStorage) Flush() error {
 }
 
 // ID get this id of memory session store
-func (st *memoryStorage) ID() string {
+func (st *storage) ID() string {
 	return st.sid
 }
 
 // Release Implement method, no used.
-func (st *memoryStorage) Release(w http.ResponseWriter) {
+func (st *storage) Release(w http.ResponseWriter) {
 }
 

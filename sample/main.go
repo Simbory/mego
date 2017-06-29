@@ -1,19 +1,20 @@
 package main
 
 import (
-	"github.com/Simbory/mego"
-	"github.com/Simbory/mego/cache"
-	"github.com/Simbory/mego/session"
-	"github.com/Simbory/mego/sample/admin"
-	"github.com/Simbory/mego/sample/handlers"
-	"github.com/Simbory/mego/sample/filters"
+	"github.com/simbory/mego"
+	"github.com/simbory/mego/cache"
+	"github.com/simbory/mego/session"
+	"github.com/simbory/mego/sample/admin"
+	"github.com/simbory/mego/sample/handlers"
+	"github.com/simbory/mego/sample/filters"
+	"github.com/simbory/mego/session/disk"
 )
 
 func main() {
 	server := mego.NewServer(mego.WorkingDir(), ":8080", 0, "")
 
 	cache.UseDefault()
-	provider := session.NewDiskProvider(server.MapWebRoot("/temp/sessions"))
+	provider := disk.NewProvider(server.MapWebRoot("/temp/sessions"))
 	mgr := session.CreateManager(server,nil, provider)
 	session.UseAsDefault(mgr)
 

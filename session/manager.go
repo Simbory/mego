@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-	"github.com/Simbory/mego"
+	"github.com/simbory/mego"
 	"github.com/google/uuid"
 	"encoding/gob"
+	"github.com/simbory/mego/assert"
 )
 
 type Config struct {
-	ManagerName     string `xml:"manager,attr"`
 	CookieName      string `xml:"cookieName,attr"`
 	EnableSetCookie bool   `xml:"enableSetCookie,attr"`
 	GcLifetime      int64  `xml:"gcLifetime,attr"`
@@ -159,32 +159,26 @@ func (manager *Manager) RegenerateID(ctx *mego.Context) (session Storage) {
 	return
 }
 
-func (manager *Manager) RegisterType(value interface{}) {
-	gob.Register(value)
+func (manager *Manager) RegisterType(name string, value interface{}) {
+	gob.RegisterName(name, value)
 }
 
-func newSessionManager(server *mego.Server, config *Config, provider Provider) (*Manager, error) {
+func newSessionManager(server *mego.Server, config *Config, provider Provider) *Manager {
 	config.EnableSetCookie = true
 	if config.MaxLifetime == 0 {
 		config.MaxLifetime = config.GcLifetime
 	}
 	if server != nil {
 		server.OnStart(func() {
-			err := provider.Init(config.MaxLifetime, config.ProviderConfig)
-			if err != nil {
-				panic(err)
-			}
+			assert.PanicErr(provider.Init(config.MaxLifetime, config.ProviderConfig))
 		})
 	} else {
-		err := provider.Init(config.MaxLifetime, config.ProviderConfig)
-		if err != nil {
-			return nil, err
-		}
+		assert.PanicErr(provider.Init(config.MaxLifetime, config.ProviderConfig))
 	}
 	return &Manager{
 		provider: provider,
 		config:   config,
-	}, nil
+	}
 }
 
 func newSessionId() string {

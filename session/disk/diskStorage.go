@@ -1,4 +1,4 @@
-package session
+package disk
 
 import (
 	"time"
@@ -10,9 +10,9 @@ import (
 	"encoding/gob"
 )
 
-// diskStorage disk session store.
+// storage disk session store.
 // it saved sessions in a map in disk.
-type diskStorage struct {
+type storage struct {
 	sid          string                      //session id
 	timeAccessed time.Time                   //last access Time
 	value        map[string]interface{} //session store
@@ -20,17 +20,17 @@ type diskStorage struct {
 	lock         sync.RWMutex
 }
 
-type diskValue struct {
+type storage_value struct {
 	Time  time.Time `json:"time"`
 	Value map[string]interface{} `json:"value"`
 }
 
-func (st *diskStorage) diskFile() string {
+func (st *storage) diskFile() string {
 	return st.diskDir + "/" + st.sid + ".session"
 }
 
-// Set Value to memory session
-func (st *diskStorage) Set(key string, value interface{}) error {
+// Set Value to session
+func (st *storage) Set(key string, value interface{}) error {
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	if st.value == nil {
@@ -42,8 +42,8 @@ func (st *diskStorage) Set(key string, value interface{}) error {
 	return nil
 }
 
-// Get Value from memory session by key
-func (st *diskStorage) Get(key string) interface{} {
+// Get Value from session by key
+func (st *storage) Get(key string) interface{} {
 	st.lock.RLock()
 	defer st.lock.RUnlock()
 	if st.value == nil {
@@ -61,8 +61,8 @@ func (st *diskStorage) Get(key string) interface{} {
 	return nil
 }
 
-// Delete in memory session by key
-func (st *diskStorage) Delete(key string) error {
+// Delete in session by key
+func (st *storage) Delete(key string) error {
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	delete(st.value, key)
@@ -71,7 +71,7 @@ func (st *diskStorage) Delete(key string) error {
 }
 
 // Flush clear all values in session
-func (st *diskStorage) Flush() error {
+func (st *storage) Flush() error {
 	st.lock.Lock()
 	defer st.lock.Unlock()
 	st.value = make(map[string]interface{})
@@ -79,18 +79,18 @@ func (st *diskStorage) Flush() error {
 	return nil
 }
 
-// ID get this id of memory session store
-func (st *diskStorage) ID() string {
+// ID get this id of session store
+func (st *storage) ID() string {
 	return st.sid
 }
 
 // Release clear all the session data and release the disk space
-func (st *diskStorage) Release(w http.ResponseWriter) {
+func (st *storage) Release(w http.ResponseWriter) {
 	st.delFile()
 	st.Flush()
 }
 
-func (st *diskStorage) delFile() {
+func (st *storage) delFile() {
 	stat,err := os.Stat(st.diskFile())
 	if err != nil {
 		return
@@ -104,7 +104,7 @@ func (st *diskStorage) delFile() {
 	}
 }
 
-func (st *diskStorage) writeLog(log string, err error)  {
+func (st *storage) writeLog(log string, err error)  {
 	f,err := os.OpenFile(st.diskDir + "/session.log", os.O_RDWR|os.O_CREATE|os.O_APPEND,0644)
 	if err != nil {
 		return
@@ -127,7 +127,7 @@ func (st *diskStorage) writeLog(log string, err error)  {
 	f.Write(buf.Bytes())
 }
 
-func (st *diskStorage) saveValue() {
+func (st *storage) saveValue() {
 	go func() {
 		var err error
 		if st.value == nil || len(st.value) == 0 {
@@ -135,7 +135,7 @@ func (st *diskStorage) saveValue() {
 		} else {
 			buf := bytes.NewBuffer(nil)
 			gobEncoder := gob.NewEncoder(buf)
-			err = gobEncoder.Encode(&diskValue{Time: st.timeAccessed, Value: st.value})
+			err = gobEncoder.Encode(&storage_value{Time: st.timeAccessed, Value: st.value})
 			if err == nil {
 				err = ioutil.WriteFile(st.diskFile(), buf.Bytes(), 0666)
 			}
@@ -147,7 +147,7 @@ func (st *diskStorage) saveValue() {
 	}()
 }
 
-func (st *diskStorage) readValue() *diskValue {
+func (st *storage) readValue() *storage_value {
 	stat,err := os.Stat(st.diskFile())
 	if err != nil {
 		if os.IsNotExist(err){
@@ -168,7 +168,7 @@ func (st *diskStorage) readValue() *diskValue {
 	defer f.Close()
 
 	gobDecoder := gob.NewDecoder(f)
-	value := &diskValue{}
+	value := &storage_value{}
 	err = gobDecoder.Decode(value)
 	if err != nil {
 		go st.writeLog("failed to read the session file", err)

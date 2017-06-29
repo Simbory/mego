@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"github.com/Simbory/mego"
-	"github.com/Simbory/mego/cache"
+	"github.com/simbory/mego"
+	"github.com/simbory/mego/cache"
 	"time"
 )
 

@@ -12,7 +12,7 @@ import (
 	"io"
 	"errors"
 	"bytes"
-	"github.com/Simbory/mego/fswatcher"
+	"github.com/simbory/mego/fswatcher"
 )
 
 type ViewEngine struct {

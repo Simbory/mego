@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"github.com/Simbory/mego"
-	"github.com/Simbory/mego/session"
+	"github.com/simbory/mego"
+	"github.com/simbory/mego/session"
 )
 
 type userModel struct {

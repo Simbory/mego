@@ -9,10 +9,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/Simbory/mego"
-	"github.com/Simbory/mego/cache"
-	"github.com/Simbory/mego/session"
-	"github.com/Simbory/mego/view"
+	"github.com/simbory/mego"
+	"github.com/simbory/mego/cache"
+	"github.com/simbory/mego/session"
+	"github.com/simbory/mego/view"
 )
 
 func getDate(ctx *mego.Context) interface{} {

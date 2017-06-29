@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"github.com/Simbory/mego"
-	"github.com/Simbory/mego/session"
+	"github.com/simbory/mego"
+	"github.com/simbory/mego/session"
 )
 
 func Init(server *mego.Server) {
@@ -12,5 +12,5 @@ func Init(server *mego.Server) {
 	server.Get("/session", testSession)
 	server.Get("/uuid", testUUID)
 	server.Any("/filter/*pathInfo", testFilter)
-	session.Default().RegisterType(&userModel{})
+	session.Default().RegisterType("UserModel", &userModel{})
 }

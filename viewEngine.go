@@ -1,7 +1,7 @@
 package mego
 
 import (
-	"github.com/Simbory/mego/views"
+	"github.com/simbory/mego/views"
 	"errors"
 	"html/template"
 )

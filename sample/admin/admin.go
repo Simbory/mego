@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"github.com/Simbory/mego"
+	"github.com/simbory/mego"
 	"fmt"
 )
 

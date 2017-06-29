@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/Simbory/mego"
+	"github.com/simbory/mego"
 	"github.com/google/uuid"
 )
 

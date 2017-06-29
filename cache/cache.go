@@ -3,7 +3,7 @@ package cache
 import (
 	"errors"
 	"fmt"
-	"github.com/Simbory/mego/fswatcher"
+	"github.com/simbory/mego/fswatcher"
 	"os"
 	"path"
 	"strings"

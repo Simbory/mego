@@ -1,6 +1,6 @@
 package handlers
 
-import "github.com/Simbory/mego"
+import "github.com/simbory/mego"
 
 func getDate(ctx *mego.Context) interface{} {
 	return &struct {
