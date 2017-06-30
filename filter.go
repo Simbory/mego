@@ -13,9 +13,9 @@ func (fk *filterKey) canExec(urlPath string) bool {
 	}
 }
 
-type filterContainer map[filterKey]func(*Context)
+type filterContainer map[filterKey]func(*HttpCtx)
 
-func (fc filterContainer) exec(urlPath string, ctx *Context) {
+func (fc filterContainer) exec(urlPath string, ctx *HttpCtx) {
 	for key, f := range fc {
 		if key.canExec(urlPath) {
 			if f(ctx); ctx.ended {
@@ -25,7 +25,7 @@ func (fc filterContainer) exec(urlPath string, ctx *Context) {
 	}
 }
 
-func (fc filterContainer) add(pathPrefix string, matchAll bool, f func(*Context)) {
+func (fc filterContainer) add(pathPrefix string, matchAll bool, f func(*HttpCtx)) {
 	key := filterKey{
 		pathPrefix: pathPrefix,
 		matchAll: matchAll,

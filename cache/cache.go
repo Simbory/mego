@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/simbory/mego/assert"
 )
 
 var (
@@ -163,9 +164,9 @@ func (c *Manager) Stop() {
 const DefaultGCInterval = 10 * time.Second
 
 func NewManager(gcInterval time.Duration) *Manager {
-	if gcInterval <= 0 {
-		panic(fmt.Errorf("Invalid gabage collection time interval: %d", gcInterval))
-	}
+	assert.Assert("gcInterval", func() bool {
+		return gcInterval > 0
+	})
 	fw,err := fswatcher.NewWatcher()
 	if err != nil {
 		fw = nil

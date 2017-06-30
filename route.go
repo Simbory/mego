@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"github.com/simbory/mego/assert"
 )
 
 const (
@@ -31,7 +32,7 @@ var (
 )
 
 // ReqHandler the route handler function
-type ReqHandler func(ctx *Context) interface{}
+type ReqHandler func(ctx *HttpCtx) interface{}
 
 // RouteFunc define the route check function
 type RouteFunc func(urlPath string, opt RouteOpt) string
@@ -259,12 +260,8 @@ type routeTree struct {
 }
 
 func (tree *routeTree) addFunc(name string, fun RouteFunc) {
-	if len(name) == 0 {
-		panic(errors.New("The parameter 'name' cannot be empty"))
-	}
-	if fun == nil {
-		panic(errors.New("The parameter 'fun' cannot be nil"))
-	}
+	assert.NotEmpty("name", name)
+	assert.NotNil("fun", fun)
 	if _, ok := tree.funcMap[name]; ok {
 		panic(fmt.Errorf("the '%s' function is already exist", name))
 	}
@@ -444,12 +441,9 @@ func (tree *routeTree) lookup(urlPath string) (map[string]ReqHandler, map[string
 }
 
 func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) {
-	if len(routePath) == 0 {
-		panic(errors.New("'routePath' param cannot be empty"))
-	}
-	if handler == nil {
-		panic(errors.New("'handler' param cannot be nil"))
-	}
+	assert.NotEmpty("method", method)
+	assert.NotEmpty("routePath", routePath)
+	assert.NotNil("handler", handler)
 	if routePath == "/" {
 		if tree.handlers == nil {
 			tree.handlers = map[string]ReqHandler{
@@ -461,12 +455,9 @@ func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) {
 		return
 	}
 	branch, err := newRouteNode(routePath, method, handler)
-	if err != nil {
-		panic(err)
-	}
-	if err = tree.addChild(branch); err != nil {
-		panic(err)
-	}
+	assert.PanicErr(err)
+	err = tree.addChild(branch)
+	assert.PanicErr(err)
 }
 
 func newRouteTree() *routeTree {

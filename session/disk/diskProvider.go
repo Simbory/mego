@@ -55,9 +55,12 @@ func (prov *provider) Init(maxLifeTime int64, _ string) error {
 			sid := fileName[0:strings.Index(fileName, ".")]
 			storage := prov.newStorage(sid)
 			data:= storage.readValue()
-
-			storage.timeAccessed = data.Time
-			storage.value = data.Value
+			if data != nil {
+				storage.timeAccessed = data.Time
+				storage.value = data.Value
+			} else {
+				continue
+			}
 			prov.sessions[sid] = storage
 		}
 	}
@@ -71,7 +74,6 @@ func (prov *provider) newStorage(sid string) *storage {
 		value: nil,
 		diskDir: prov.savePath,
 	}
-	prov.sessions[sid] = newStore
 	return newStore
 }
 
@@ -86,6 +88,7 @@ func (prov *provider) Read(sid string) session.Storage {
 	prov.lock.RUnlock()
 	prov.lock.Lock()
 	newStore := prov.newStorage(sid)
+	prov.sessions[sid] = newStore
 	prov.lock.Unlock()
 	return newStore
 }
@@ -119,6 +122,7 @@ func (prov *provider) Regenerate(oldSid, sid string) (session.Storage, error) {
 	prov.lock.RUnlock()
 	prov.lock.Lock()
 	newStore := prov.newStorage(sid)
+	prov.sessions[sid] = newStore
 	prov.lock.Unlock()
 	return newStore, nil
 }

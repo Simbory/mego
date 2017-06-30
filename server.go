@@ -10,6 +10,7 @@ import (
 	"sync"
 	"path"
 	"os"
+	"github.com/simbory/mego/assert"
 )
 
 type routeSetting struct {
@@ -119,9 +120,7 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 	method := strings.ToUpper(r.Method)
 
 	handlers, routeData, err := s.routing.lookup(urlPath)
-	if err != nil {
-		panic(err)
-	}
+	assert.PanicErr(err)
 	var handler ReqHandler
 	var ok bool
 	if handlers != nil {
@@ -131,7 +130,7 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 		}
 	}
 	if handler != nil && ok {
-		var ctx = &Context{
+		var ctx = &HttpCtx{
 			req:       r,
 			res:       w,
 			routeData: routeData,
@@ -140,9 +139,7 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 		// auto parse post form data
 		if ctx.req.Method == "POST" || ctx.req.Method == "PUT" || ctx.req.Method == "PATCH" {
 			err := ctx.parseForm()
-			if err != nil {
-				panic(err)
-			}
+			assert.PanicErr(err)
 		}
 		s.filters.exec(urlPath, ctx)
 		if ctx.ended {
@@ -181,15 +178,11 @@ func (s *Server) flush(w http.ResponseWriter, req *http.Request, result interfac
 		var err error
 		if cType == "text/xml" {
 			contentBytes, err = xml.Marshal(result)
-			if err != nil {
-				panic(err)
-			}
+			assert.PanicErr(err)
 			w.Header().Add("Content-Type", "text/xml")
 		} else {
 			contentBytes, err = json.Marshal(result)
-			if err != nil {
-				panic(err)
-			}
+			assert.PanicErr(err)
 			w.Header().Add("Content-Type", "application/json")
 		}
 		w.Write(contentBytes)

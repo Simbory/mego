@@ -13,6 +13,7 @@ import (
 	"errors"
 	"bytes"
 	"github.com/simbory/mego/fswatcher"
+	"github.com/simbory/mego/assert"
 )
 
 type ViewEngine struct {
@@ -179,9 +180,7 @@ func (engine *ViewEngine) compile() error {
 func (engine *ViewEngine) includeView(viewName string, data interface{}) template.HTML {
 	buf := &bytes.Buffer{}
 	err := engine.Render(buf, viewName, data)
-	if err != nil {
-		panic(err)
-	}
+	assert.PanicErr(err)
 	return template.HTML(buf.Bytes())
 }
 

@@ -10,7 +10,7 @@ type userModel struct {
 	LastName string `json:"last_name"`
 }
 
-func testSession(ctx *mego.Context) interface{} {
+func testSession(ctx *mego.HttpCtx) interface{} {
 	sessionStore := session.Default().Start(ctx)
 	var msg string
 	data := sessionStore.Get("msg")

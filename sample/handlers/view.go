@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func renderView(ctx *mego.Context) interface{} {
+func renderView(ctx *mego.HttpCtx) interface{} {
 	msg := cache.Default().Get("msg")
 	if msg == nil {
 		msg = time.Now().Format(time.RFC1123Z)

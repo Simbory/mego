@@ -2,7 +2,7 @@ package handlers
 
 import "github.com/simbory/mego"
 
-func getDate(ctx *mego.Context) interface{} {
+func getDate(ctx *mego.HttpCtx) interface{} {
 	return &struct {
 		Year  int `json:"year"`
 		Month int `json:"month"`

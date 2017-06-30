@@ -68,7 +68,7 @@ func (manager *Manager) GC() {
 
 // Start generate or read the session id from http request.
 // if session id exists, return Storage with this id.
-func (manager *Manager) Start(ctx *mego.Context) Storage {
+func (manager *Manager) Start(ctx *mego.HttpCtx) Storage {
 	r := ctx.Request()
 	w := ctx.Response()
 	id, err := manager.getSessionID(r)
@@ -103,7 +103,7 @@ func (manager *Manager) Start(ctx *mego.Context) Storage {
 }
 
 // Destroy Destroy session by its id in http request cookie.
-func (manager *Manager) Destroy(ctx *mego.Context) {
+func (manager *Manager) Destroy(ctx *mego.HttpCtx) {
 	r := ctx.Request()
 	w := ctx.Response()
 	cookie, err := r.Cookie(manager.config.CookieName)
@@ -126,7 +126,7 @@ func (manager *Manager) Destroy(ctx *mego.Context) {
 }
 
 // RegenerateID Regenerate a session id for this Storage who's id is saving in http request.
-func (manager *Manager) RegenerateID(ctx *mego.Context) (session Storage) {
+func (manager *Manager) RegenerateID(ctx *mego.HttpCtx) (session Storage) {
 	r := ctx.Request()
 	w := ctx.Response()
 	sid := newSessionId()
@@ -183,8 +183,6 @@ func newSessionManager(server *mego.Server, config *Config, provider Provider) *
 
 func newSessionId() string {
 	id,err := uuid.NewUUID()
-	if err != nil {
-		panic(err)
-	}
+	assert.PanicErr(err)
 	return id.String()
 }

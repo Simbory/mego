@@ -3,19 +3,18 @@ package admin
 import (
 	"github.com/simbory/mego"
 	"fmt"
+	"github.com/simbory/mego/assert"
 )
 
-func getUpload(_ *mego.Context) interface{} {
+func getUpload(_ *mego.HttpCtx) interface{} {
 	return view.Render("upload", nil)
 }
 
-func postUpload(ctx *mego.Context) interface{} {
+func postUpload(ctx *mego.HttpCtx) interface{} {
 	file := ctx.PostFile("file")
 	filePath := ctx.MapPath(file.FileName)
 	err := file.SaveAndClose(filePath)
-	if err != nil {
-		panic(err)
-	}
+	assert.PanicErr(err)
 	return fmt.Sprintf("file Size: %d", file.Size)
 }
 

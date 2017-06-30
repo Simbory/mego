@@ -14,8 +14,8 @@ type sizer interface {
 	Size() int64
 }
 
-// Context the mego context struct
-type Context struct {
+// HttpCtx the mego context struct
+type HttpCtx struct {
 	req       *http.Request
 	res       http.ResponseWriter
 	routeData map[string]string
@@ -25,17 +25,17 @@ type Context struct {
 }
 
 // Request get the mego request
-func (ctx *Context) Request() *http.Request {
+func (ctx *HttpCtx) Request() *http.Request {
 	return ctx.req
 }
 
 // Response get the mego response
-func (ctx *Context) Response() http.ResponseWriter {
+func (ctx *HttpCtx) Response() http.ResponseWriter {
 	return ctx.res
 }
 
 // RouteString get the route parameter value as string by key
-func (ctx *Context) RouteString(key string) string {
+func (ctx *HttpCtx) RouteString(key string) string {
 	if ctx.routeData == nil {
 		return ""
 	}
@@ -43,7 +43,7 @@ func (ctx *Context) RouteString(key string) string {
 }
 
 // RouteInt get the route parameter value as int64 by key
-func (ctx *Context) RouteInt(key string) int64 {
+func (ctx *HttpCtx) RouteInt(key string) int64 {
 	var rawValue = ctx.RouteString(key)
 	if len(rawValue) == 0 {
 		return 0
@@ -56,7 +56,7 @@ func (ctx *Context) RouteInt(key string) int64 {
 }
 
 // RouteUint get the route parameter value as uint64 by key
-func (ctx *Context) RouteUint(key string) uint64 {
+func (ctx *HttpCtx) RouteUint(key string) uint64 {
 	var rawValue = ctx.RouteString(key)
 	if len(rawValue) == 0 {
 		return 0
@@ -69,7 +69,7 @@ func (ctx *Context) RouteUint(key string) uint64 {
 }
 
 // RouteFloat get the route parameter value as float by key
-func (ctx *Context) RouteFloat(key string) float64 {
+func (ctx *HttpCtx) RouteFloat(key string) float64 {
 	var rawValue = ctx.RouteString(key)
 	if len(rawValue) == 0 {
 		return 0
@@ -81,7 +81,7 @@ func (ctx *Context) RouteFloat(key string) float64 {
 	return value
 }
 
-func (ctx *Context) RouteUUID(key string) uuid.UUID {
+func (ctx *HttpCtx) RouteUUID(key string) uuid.UUID {
 	var rawValue= ctx.RouteString(key)
 	if len(rawValue) == 0 {
 		return uuid.Nil
@@ -94,7 +94,7 @@ func (ctx *Context) RouteUUID(key string) uuid.UUID {
 }
 
 // RouteBool get the route parameter value as boolean by key
-func (ctx *Context) RouteBool(key string) bool {
+func (ctx *HttpCtx) RouteBool(key string) bool {
 	var rawValue = ctx.RouteString(key)
 	if len(rawValue) == 0 || strings.ToLower(rawValue) == "false" || rawValue == "0"  {
 		return false
@@ -102,7 +102,7 @@ func (ctx *Context) RouteBool(key string) bool {
 	return true
 }
 
-func (ctx *Context) PostFile(formName string) *UploadFile {
+func (ctx *HttpCtx) PostFile(formName string) *UploadFile {
 	f, h, err := ctx.Request().FormFile(formName)
 	if err != nil {
 		return &UploadFile{Error: err}
@@ -120,7 +120,7 @@ func (ctx *Context) PostFile(formName string) *UploadFile {
 }
 
 // SetItem add context data to mego context
-func (ctx *Context) SetItem(key string, data interface{}) {
+func (ctx *HttpCtx) SetItem(key string, data interface{}) {
 	if len(key) == 0 {
 		return
 	}
@@ -131,7 +131,7 @@ func (ctx *Context) SetItem(key string, data interface{}) {
 }
 
 // GetItem get the context data from mego context by key
-func (ctx *Context) GetItem(key string) interface{} {
+func (ctx *HttpCtx) GetItem(key string) interface{} {
 	if ctx.items == nil {
 		return nil
 	}
@@ -139,7 +139,7 @@ func (ctx *Context) GetItem(key string) interface{} {
 }
 
 // RemoveItem delete context item from mego context by key
-func (ctx *Context) RemoveItem(key string) interface{} {
+func (ctx *HttpCtx) RemoveItem(key string) interface{} {
 	if ctx.items == nil {
 		return nil
 	}
@@ -147,17 +147,17 @@ func (ctx *Context) RemoveItem(key string) interface{} {
 	delete(ctx.items, key)
 	return data
 }
-func (ctx *Context) MapPath(path string) string {
+func (ctx *HttpCtx) MapPath(path string) string {
 	return ctx.server.MapRootPath(path)
 }
 
 // End end the mego context and stop the rest request function
-func (ctx *Context) End() {
+func (ctx *HttpCtx) End() {
 	ctx.ended = true
 }
 
 // parseForm parse the post form (both multipart and normal form)
-func (ctx *Context) parseForm() error {
+func (ctx *HttpCtx) parseForm() error {
 	isMultipart, reader, err := ctx.multipart()
 	if err != nil {
 		return err
@@ -190,7 +190,7 @@ func (ctx *Context) parseForm() error {
 	return nil
 }
 
-func (ctx *Context) multipart() (bool,*multipart.Reader,error) {
+func (ctx *HttpCtx) multipart() (bool,*multipart.Reader,error) {
 	v := ctx.req.Header.Get("Content-Type")
 	if v == "" {
 		return false, nil, nil

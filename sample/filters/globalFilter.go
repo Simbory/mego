@@ -2,6 +2,6 @@ package filters
 
 import "github.com/simbory/mego"
 
-func globalFilter(ctx *mego.Context) {
+func globalFilter(ctx *mego.HttpCtx) {
 	ctx.SetItem("user", "Simbory")
 }

@@ -2,8 +2,8 @@ package mego
 
 import (
 	"github.com/simbory/mego/views"
-	"errors"
 	"html/template"
+	"github.com/simbory/mego/assert"
 )
 
 type ViewEngine struct {
@@ -17,9 +17,7 @@ func (e *ViewEngine) Render(viewName string, data interface{}) Result {
 	if e.engine == nil {
 		func(e *ViewEngine) {
 			eg,err := views.NewEngine(e.viewDir, e.viewExt)
-			if err != nil {
-				panic(err)
-			}
+			assert.PanicErr(err)
 			for name, f := range e.viewFunc {
 				eg.AddFunc(name, f)
 			}
@@ -44,9 +42,8 @@ func (e *ViewEngine) ExtendView(name string, viewFunc interface{}) {
 }
 
 func NewViewEngine(viewDir, viewExt string) *ViewEngine {
-	if len(viewDir) == 0 {
-		panic(errors.New("The view directory cannot be empty"))
-	}
+	assert.NotEmpty("viewDir", viewDir)
+	assert.NotEmpty("viewExt", viewExt)
 	return &ViewEngine{
 		engine: nil,
 		viewDir: viewDir,

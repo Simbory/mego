@@ -2,12 +2,12 @@ package mego
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"path"
+	"github.com/simbory/mego/assert"
 )
 
 // AssertUnlocked make sure the function only can be called just before the s is running
@@ -23,13 +23,14 @@ func (s *Server) OnStart(h func()) {
 	}
 }
 
+var routeNameReg = regexp.MustCompile("^[a-zA-Z][\\w]*$")
+
 // AddRouteFunc add route validation func
 func (s *Server) AddRouteFunc(name string, fun RouteFunc) {
 	s.AssertUnlocked()
-	reg := regexp.MustCompile("^[a-zA-Z][\\w]*$")
-	if !reg.Match([]byte(name)) {
-		panic(fmt.Errorf("Invalid route func name: %s", name))
-	}
+	assert.Assert("name", func() bool {
+		return routeNameReg.Match([]byte(name))
+	})
 	s.routing.addFunc(name, fun)
 }
 
@@ -87,14 +88,16 @@ func (s *Server) Any(routePath string, handler ReqHandler) {
 	s.addRoute("*", routePath, handler)
 }
 
+
+var areaNameReg = regexp.MustCompile("[/a-zA-Z0-9_-]+")
+
 // GetArea get or create the mego area
 func (s *Server) GetArea(pathPrefix string) *Area {
 	prefix := strings.Trim(pathPrefix, "/")
 	prefix = strings.Trim(prefix, "\\")
-	reg := regexp.MustCompile("[/a-zA-Z0-9_-]+")
-	if !reg.Match([]byte(prefix)) {
-		panic(errors.New("Invalid pathPrefix:" + pathPrefix))
-	}
+	assert.Assert("pathPrefix", func() bool {
+		return areaNameReg.Match([]byte(prefix))
+	})
 	return &Area{
 		pathPrefix: "/" + prefix,
 		server: s,
@@ -153,7 +156,7 @@ func (s *Server) Handle500(h func(http.ResponseWriter, *http.Request, interface{
 // HandleFilter handle the path
 // the path prefix ends with char '*', the filter will be available for all urls that
 // starts with pathPrefix. Otherwise, the filter only be available for the featured url
-func (s *Server) HandleFilter(pathPrefix string, h func(*Context)) error {
+func (s *Server) HandleFilter(pathPrefix string, h func(*HttpCtx)) error {
 	s.AssertUnlocked()
 	if len(pathPrefix) == 0 {
 		return errors.New("The parameter 'pathPrefix' cannot be empty")
@@ -188,16 +191,12 @@ func (s *Server)ExtendView(name string, f interface{}) {
 func (s *Server)Run() {
 	s.onInit()
 	err := http.ListenAndServe(s.addr, s)
-	if err != nil {
-		panic(err)
-	}
+	assert.PanicErr(err)
 }
 
 // RunTLS run the application as https
 func (s *Server)RunTLS(certFile, keyFile string) {
 	s.onInit()
 	err := http.ListenAndServeTLS(s.addr, certFile, keyFile, s)
-	if err != nil {
-		panic(err)
-	}
+	assert.PanicErr(err)
 }
