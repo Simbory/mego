@@ -137,7 +137,7 @@ func (st *storage) saveValue() {
 			gobEncoder := gob.NewEncoder(buf)
 			err = gobEncoder.Encode(&storage_value{Time: st.timeAccessed, Value: st.value})
 			if err == nil {
-				err = ioutil.WriteFile(st.diskFile(), buf.Bytes(), 0666)
+				err = ioutil.WriteFile(st.diskFile(), buf.Bytes(), 0777)
 			}
 		}
 		if err != nil {

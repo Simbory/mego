@@ -28,7 +28,7 @@ func (prov *provider) Init(maxLifeTime int64, _ string) error {
 	stat,err := os.Stat(prov.savePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			os.MkdirAll(prov.savePath, 0666)
+			os.MkdirAll(prov.savePath, 0777)
 		} else {
 			return err
 		}
