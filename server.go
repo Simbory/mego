@@ -17,6 +17,7 @@ type routeSetting struct {
 	method     string
 	routePath  string
 	reqHandler ReqHandler
+	area       *Area
 }
 
 type Server struct {
@@ -83,13 +84,23 @@ func (s *Server) addRoute(m, p string, h ReqHandler) {
 		method: m,
 		routePath: p,
 		reqHandler: h,
+		area: nil,
+	})
+}
+
+func (s *Server) addAreaRoute(m, p string, area *Area, h ReqHandler) {
+	s.routeSettings = append(s.routeSettings, &routeSetting{
+		method: m,
+		routePath: p,
+		reqHandler: h,
+		area: area,
 	})
 }
 
 func (s *Server) onInit() {
 	if len(s.routeSettings) > 0 {
 		for _, setting := range s.routeSettings {
-			s.routing.addRoute(setting.method, setting.routePath, setting.reqHandler)
+			s.routing.addRoute(setting.method, setting.routePath, setting.area, setting.reqHandler)
 		}
 	}
 	if len(s.initEvents) > 0 {
@@ -119,7 +130,7 @@ func (s *Server) processStaticRequest(w http.ResponseWriter, r *http.Request) {
 func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, urlPath string) interface{} {
 	method := strings.ToUpper(r.Method)
 
-	handlers, routeData, err := s.routing.lookup(urlPath)
+	handlers, routeData, area, err := s.routing.lookup(urlPath)
 	assert.PanicErr(err)
 	var handler ReqHandler
 	var ok bool
@@ -135,6 +146,7 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 			res:       w,
 			routeData: routeData,
 			server:    s,
+			area: area,
 		}
 		// auto parse post form data
 		if ctx.req.Method == "POST" || ctx.req.Method == "PUT" || ctx.req.Method == "PATCH" {

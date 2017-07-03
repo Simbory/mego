@@ -6,8 +6,8 @@ import (
 	"github.com/simbory/mego/assert"
 )
 
-func getUpload(_ *mego.HttpCtx) interface{} {
-	return view.Render("upload", nil)
+func getUpload(ctx *mego.HttpCtx) interface{} {
+	return ctx.ViewResult("upload", nil)
 }
 
 func postUpload(ctx *mego.HttpCtx) interface{} {
@@ -19,11 +19,9 @@ func postUpload(ctx *mego.HttpCtx) interface{} {
 }
 
 var area *mego.Area
-var view *mego.ViewEngine
 
 func Init(server *mego.Server) {
 	area = server.GetArea("admin")
 	area.Get("upload", getUpload)
 	area.Post("upload", postUpload)
-	view = mego.NewViewEngine(server.MapRootPath(area.Key() + "/views"), ".html")
 }

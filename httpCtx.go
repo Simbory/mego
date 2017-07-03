@@ -22,6 +22,7 @@ type HttpCtx struct {
 	ended     bool
 	items     map[string]interface{}
 	server    *Server
+	area      *Area
 }
 
 // Request get the mego request
@@ -77,18 +78,6 @@ func (ctx *HttpCtx) RouteFloat(key string) float64 {
 	value,err := strconv.ParseFloat(rawValue, 64)
 	if err != nil {
 		return 0
-	}
-	return value
-}
-
-func (ctx *HttpCtx) RouteUUID(key string) uuid.UUID {
-	var rawValue= ctx.RouteString(key)
-	if len(rawValue) == 0 {
-		return uuid.Nil
-	}
-	value, err := uuid.Parse(rawValue)
-	if err != nil {
-		return uuid.Nil
 	}
 	return value
 }

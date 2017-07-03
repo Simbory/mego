@@ -18,7 +18,7 @@ func (file *UploadFile) Save(path string) error {
 	if file.Error != nil {
 		return file.Error
 	}
-	f,err := os.Create(path)
+	f,err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL|os.O_TRUNC, 0666)
 	if err == nil {
 		defer f.Close()
 		if file.File != nil {

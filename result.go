@@ -207,8 +207,13 @@ func (ctx *HttpCtx) FileResult(path string, contentType string) Result {
 
 // ViewResult find the view by view name, execute the view template and get the result
 func (ctx *HttpCtx) ViewResult (viewName string, data interface{}) Result {
-	ctx.server.initViewEngine()
-	return ctx.server.viewEngine.Render(viewName, data)
+	if ctx.area != nil {
+		ctx.area.initViewEngine()
+		return ctx.area.viewEngine.Render(viewName, data)
+	} else {
+		ctx.server.initViewEngine()
+		return ctx.server.viewEngine.Render(viewName, data)
+	}
 }
 
 func redirect(url string, statusCode int) *RedirectResult {

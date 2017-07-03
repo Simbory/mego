@@ -91,6 +91,7 @@ type routeNode struct {
 	Params     map[string]RouteOpt
 	handlers   map[string]ReqHandler
 	Children   []*routeNode
+	area       *Area
 }
 
 func (node *routeNode) isLeaf() bool {
@@ -157,9 +158,9 @@ func (node *routeNode) isParamPath(path string) bool {
 	return strings.HasPrefix(path, paramBeginStr) && strings.HasSuffix(path, paramEndStr)
 }
 
-func (node *routeNode) detectDefault() (bool, map[string]ReqHandler, map[string]string) {
+func (node *routeNode) detectDefault() (bool, map[string]ReqHandler, map[string]string, *Area) {
 	if !node.hasChildren() {
-		return false, nil, nil
+		return false, nil, nil, nil
 	}
 	for _, child := range node.Children {
 		if child.NodeType != param || len(child.PathSplits) != 1 || !node.isParamPath(child.PathSplits[0]) {
@@ -176,18 +177,18 @@ func (node *routeNode) detectDefault() (bool, map[string]ReqHandler, map[string]
 			continue
 		}
 		if child.handlers != nil {
-			return true, child.handlers, map[string]string{paramName: opt.DefaultValue()}
+			return true, child.handlers, map[string]string{paramName: opt.DefaultValue()}, child.area
 		}
-		found, ctrl, routeMap := child.detectDefault()
+		found, ctrl, routeMap, area := child.detectDefault()
 		if found {
 			routeMap[paramName] = opt.DefaultValue()
-			return true, ctrl, routeMap
+			return true, ctrl, routeMap, area
 		}
 	}
-	return false, nil, nil
+	return false, nil, nil, nil
 }
 
-func newRouteNode(routePath, method string, handler ReqHandler) (*routeNode, error) {
+func newRouteNode(routePath, method string, area *Area, handler ReqHandler) (*routeNode, error) {
 	err := checkRoutePath(routePath)
 	if err != nil {
 		return nil, err
@@ -231,6 +232,7 @@ func newRouteNode(routePath, method string, handler ReqHandler) (*routeNode, err
 	current.handlers = map[string]ReqHandler{
 		strings.ToUpper(method): handler,
 	}
+	current.area = area
 	current = result
 	for {
 		if current == nil {
@@ -268,7 +270,7 @@ func (tree *routeTree) addFunc(name string, fun RouteFunc) {
 	tree.funcMap[name] = fun
 }
 
-func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlParts []string, endWithSlash bool) (found bool, handler map[string]ReqHandler, routeMap map[string]string) {
+func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlParts []string, endWithSlash bool) (found bool, handler map[string]ReqHandler, routeMap map[string]string, area *Area) {
 	found = false
 	handler = nil
 	routeMap = nil
@@ -368,12 +370,14 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 	if indexNode.CurDepth == pathLength {
 		handler = indexNode.handlers
 		routeMap = routeData
+		area = indexNode.area
 		// detect default value
 		if handler == nil {
-			f, c, rm := indexNode.detectDefault()
+			f, c, rm, a := indexNode.detectDefault()
 			if f {
 				found = true
 				handler = c
+				area = a
 				if rm != nil {
 					for key, value := range rm {
 						routeMap[key] = value
@@ -394,7 +398,7 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 		return
 	}
 	for _, child := range indexNode.Children {
-		ok, result, rd := tree.lookupDepth(child, pathLength, urlParts, endWithSlash)
+		ok, result, rd, a := tree.lookupDepth(child, pathLength, urlParts, endWithSlash)
 		if ok {
 			if rd != nil && len(rd) > 0 {
 				for key, value := range rd {
@@ -404,43 +408,44 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 			found = true
 			handler = result
 			routeMap = routeData
+			area = a
 			return
 		}
 	}
 	return
 }
 
-func (tree *routeTree) lookup(urlPath string) (map[string]ReqHandler, map[string]string, error) {
+func (tree *routeTree) lookup(urlPath string) (map[string]ReqHandler, map[string]string, *Area, error) {
 	if urlPath == "/" {
 		handler := tree.handlers
 		if handler == nil {
-			f, c, r := tree.detectDefault()
+			f, c, r, a := tree.detectDefault()
 			if f {
-				return c, r, nil
+				return c, r, a, nil
 			}
-			return nil, nil, nil
+			return nil, nil, nil, nil
 		}
-		return tree.handlers, nil, nil
+		return tree.handlers, nil, tree.area, nil
 	}
 	urlParts, err := splitURLPath(urlPath)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var pathLength = uint16(len(urlParts))
 	if pathLength == 0 || len(tree.Children) == 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	var endWithSlash = strings.HasSuffix(urlPath, "/")
 	for _, child := range tree.Children {
-		ok, result, rd := tree.lookupDepth(child, pathLength, urlParts, endWithSlash)
+		ok, result, rd, a := tree.lookupDepth(child, pathLength, urlParts, endWithSlash)
 		if ok {
-			return result, rd, nil
+			return result, rd, a, nil
 		}
 	}
-	return nil, nil, nil
+	return nil, nil, nil, nil
 }
 
-func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) {
+func (tree *routeTree) addRoute(method, routePath string, area *Area, handler ReqHandler) {
 	assert.NotEmpty("method", method)
 	assert.NotEmpty("routePath", routePath)
 	assert.NotNil("handler", handler)
@@ -454,7 +459,7 @@ func (tree *routeTree) addRoute(method, routePath string, handler ReqHandler) {
 		}
 		return
 	}
-	branch, err := newRouteNode(routePath, method, handler)
+	branch, err := newRouteNode(routePath, method, area, handler)
 	assert.PanicErr(err)
 	err = tree.addChild(branch)
 	assert.PanicErr(err)
