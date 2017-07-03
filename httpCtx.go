@@ -43,6 +43,11 @@ func (ctx *HttpCtx) RouteString(key string) string {
 	return ctx.routeData[key]
 }
 
+// RoutePathInfo get the route parameter "*pathInfo". the route url is like "/path/prefix/*pathInfo"
+func (ctx *HttpCtx) RoutePathInfo() string {
+	return ctx.RouteString("pathInfo")
+}
+
 // RouteInt get the route parameter value as int64 by key
 func (ctx *HttpCtx) RouteInt(key string) int64 {
 	var rawValue = ctx.RouteString(key)
