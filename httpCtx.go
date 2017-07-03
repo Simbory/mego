@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"mime/multipart"
 	"mime"
-	"github.com/google/uuid"
 )
 
 type sizer interface {
