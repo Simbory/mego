@@ -24,4 +24,7 @@ func Init(server *mego.Server) {
 	area = server.GetArea("admin")
 	area.Get("upload", getUpload)
 	area.Post("upload", postUpload)
+	area.HandleFilter("/*", func(ctx *mego.HttpCtx) {
+		ctx.Response().Header().Add("mego-area-name", area.Key())
+	})
 }

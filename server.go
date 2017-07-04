@@ -73,11 +73,13 @@ func NewServer(webRoot, addr string, maxFormSize int64, urlSuffix string) *Serve
 	return s
 }
 
+// assertUnlocked assert that the server is not running
 func (s *Server) assertUnlocked() {
 	if s.locked {
 		panic(errors.New("The s is locked."))
 	}
 }
+
 
 func (s *Server) addRoute(m, p string, h ReqHandler) {
 	s.routeSettings = append(s.routeSettings, &routeSetting{
@@ -98,14 +100,14 @@ func (s *Server) addAreaRoute(m, p string, area *Area, h ReqHandler) {
 }
 
 func (s *Server) onInit() {
-	if len(s.routeSettings) > 0 {
-		for _, setting := range s.routeSettings {
-			s.routing.addRoute(setting.method, setting.routePath, setting.area, setting.reqHandler)
-		}
-	}
 	if len(s.initEvents) > 0 {
 		for _, h := range s.initEvents {
 			h()
+		}
+	}
+	if len(s.routeSettings) > 0 {
+		for _, setting := range s.routeSettings {
+			s.routing.addRoute(setting.method, setting.routePath, setting.area, setting.reqHandler)
 		}
 	}
 }
@@ -173,15 +175,15 @@ func (s *Server) flush(w http.ResponseWriter, req *http.Request, result interfac
 		return
 	case string:
 		content := result.(string)
-		w.Header().Add("Content-Type", "text/plain")
+		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		w.Write(str2Byte(content))
 		return
 	case []byte:
-		w.Header().Add("Content-Type", "text/plain")
+		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		w.Write(result.([]byte))
 		return
 	case byte:
-		w.Header().Add("Content-Type", "text/plain")
+		w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 		w.Write([]byte{result.(byte)})
 		return
 	default:
@@ -191,11 +193,11 @@ func (s *Server) flush(w http.ResponseWriter, req *http.Request, result interfac
 		if cType == "text/xml" {
 			contentBytes, err = xml.Marshal(result)
 			assert.PanicErr(err)
-			w.Header().Add("Content-Type", "text/xml")
+			w.Header().Add("Content-Type", "text/xml; charset=utf-8")
 		} else {
 			contentBytes, err = json.Marshal(result)
 			assert.PanicErr(err)
-			w.Header().Add("Content-Type", "application/json")
+			w.Header().Add("Content-Type", "application/json; charset=utf-8")
 		}
 		w.Write(contentBytes)
 	}

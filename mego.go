@@ -1,7 +1,6 @@
 package mego
 
 import (
-	"errors"
 	"net/http"
 	"regexp"
 	"strings"
@@ -10,24 +9,18 @@ import (
 	"github.com/simbory/mego/assert"
 )
 
-// AssertUnlocked make sure the function only can be called just before the s is running
-func (s *Server) AssertUnlocked() {
-	s.assertUnlocked()
-}
-
 // OnStart attach an event handler to the s start event
 func (s *Server) OnStart(h func()) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	if h != nil {
 		s.initEvents = append(s.initEvents, h)
 	}
 }
 
 var routeNameReg = regexp.MustCompile("^[a-zA-Z][\\w]*$")
-
 // AddRouteFunc add route validation func
 func (s *Server) AddRouteFunc(name string, fun RouteFunc) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	assert.Assert("name", func() bool {
 		return routeNameReg.Match([]byte(name))
 	})
@@ -36,70 +29,69 @@ func (s *Server) AddRouteFunc(name string, fun RouteFunc) {
 
 // Get used to register router for GET method
 func (s *Server) Get(routePath string, handler ReqHandler) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.addRoute("GET", routePath, handler)
 }
 
 // Post used to register router for POST method
 func (s *Server) Post(routePath string, handler ReqHandler) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.addRoute("POST", routePath, handler)
 }
 
 // Put used to register router for PUT method
 func (s *Server) Put(routePath string, handler ReqHandler) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.addRoute("PUT", routePath, handler)
 }
 
 // Options used to register router for OPTIONS method
 func (s *Server) Options(routePath string, handler ReqHandler) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.addRoute("OPTIONS", routePath, handler)
 }
 
 // Head used to register router for HEAD method
 func (s *Server) Head(routePath string, handler ReqHandler) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.addRoute("HEAD", routePath, handler)
 }
 
 // Delete used to register router for DELETE method
 func (s *Server) Delete(routePath string, handler ReqHandler) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.addRoute("DELETE", routePath, handler)
 }
 
 // Trace used to register router for TRACE method
 func (s *Server) Trace(routePath string, handler ReqHandler) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.addRoute("TRACE", routePath, handler)
 }
 
 // Connect used to register router for CONNECT method
 func (s *Server) Connect(routePath string, handler ReqHandler) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.addRoute("CONNECT", routePath, handler)
 }
 
 // Any used to register router for all methods
 func (s *Server) Any(routePath string, handler ReqHandler) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.addRoute("*", routePath, handler)
 }
-
 
 var areaNameReg = regexp.MustCompile("[/a-zA-Z0-9_-]+")
 
 // GetArea get or create the mego area
 func (s *Server) GetArea(pathPrefix string) *Area {
-	prefix := strings.Trim(pathPrefix, "/")
-	prefix = strings.Trim(prefix, "\\")
+	prefix := ClearPath(pathPrefix)
 	assert.Assert("pathPrefix", func() bool {
 		return areaNameReg.Match([]byte(prefix))
 	})
+	prefix = EnsurePrefix(prefix, "/")
 	return &Area{
-		pathPrefix: "/" + prefix,
+		pathPrefix: prefix,
 		server: s,
 		engineLock: &sync.RWMutex{},
 	}
@@ -123,7 +115,7 @@ func (s *Server) MapContentPath(virtualPath string) string {
 
 // Handle404 set custom error handler for status code 404
 func (s *Server) Handle404(h http.HandlerFunc) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	if h != nil {
 		s.err404Handler = h
 	}
@@ -131,7 +123,7 @@ func (s *Server) Handle404(h http.HandlerFunc) {
 
 // Handle404 set custom error handler for status code 404
 func (s *Server) Handle400(h http.HandlerFunc) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	if h != nil {
 		s.err400Handler = h
 	}
@@ -139,7 +131,7 @@ func (s *Server) Handle400(h http.HandlerFunc) {
 
 // Handle404 set custom error handler for status code 404
 func (s *Server) Handle403(h http.HandlerFunc) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	if h != nil {
 		s.err403Handler = h
 	}
@@ -147,7 +139,7 @@ func (s *Server) Handle403(h http.HandlerFunc) {
 
 // Handle500 set custom error handler for status code 500
 func (s *Server) Handle500(h func(http.ResponseWriter, *http.Request, interface{})) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	if h != nil {
 		s.err500Handler = h
 	}
@@ -157,23 +149,16 @@ func (s *Server) Handle500(h func(http.ResponseWriter, *http.Request, interface{
 // the path prefix ends with char '*', the filter will be available for all urls that
 // starts with pathPrefix. Otherwise, the filter only be available for the featured url
 func (s *Server) HandleFilter(pathPrefix string, h func(*HttpCtx)) error {
-	s.AssertUnlocked()
-	if len(pathPrefix) == 0 {
-		return errors.New("The parameter 'pathPrefix' cannot be empty")
-	}
-	if h == nil {
-		return errors.New("The parameter 'h' cannot be nil")
-	}
+	s.assertUnlocked()
+	assert.NotEmpty("pathPrefix", pathPrefix)
+	assert.NotNil("h", h)
 	if !strings.HasPrefix(pathPrefix, "/") {
 		pathPrefix = "/" + pathPrefix
 	}
 	var matchAll bool
 	if strings.HasSuffix(pathPrefix, "*") {
 		matchAll = true
-		pathPrefix = strings.TrimRight(pathPrefix ,"*")
-		if !strings.HasSuffix(pathPrefix, "/") {
-			pathPrefix = pathPrefix + "/"
-		}
+		pathPrefix = EnsureSuffix(strings.TrimRight(pathPrefix ,"*"), "/")
 	} else {
 		matchAll = false
 	}
@@ -181,8 +166,9 @@ func (s *Server) HandleFilter(pathPrefix string, h func(*HttpCtx)) error {
 	return nil
 }
 
+// ExtendView extend the view engine with func f
 func (s *Server)ExtendView(name string, f interface{}) {
-	s.AssertUnlocked()
+	s.assertUnlocked()
 	s.initViewEngine()
 	s.viewEngine.ExtendView(name, f)
 }

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"fmt"
 	"sync"
+	"github.com/simbory/mego/assert"
 )
 
 type Area struct {
@@ -75,6 +76,19 @@ func (a *Area)Connect(routePath string, handler ReqHandler) {
 func (a *Area)Any(routePath string, handler ReqHandler) {
 	a.server.assertUnlocked()
 	a.server.addAreaRoute("*", a.fixPath(routePath), a, handler)
+}
+
+func (a *Area) HandleFilter(pathPrefix string, h func(*HttpCtx)) {
+	a.server.assertUnlocked()
+	assert.NotEmpty("pathPrefix", pathPrefix)
+	assert.NotNil("h", h)
+	prefix := ClearPath(pathPrefix)
+	prefix = strings.Trim(prefix,"/")
+	a.server.HandleFilter(strAdd(a.Key(), "/", prefix), func(ctx *HttpCtx) {
+		if ctx.area != nil && ctx.area.Key() == a.Key() {
+			h(ctx)
+		}
+	})
 }
 
 // ExtendView add view function to the view engine of the current area

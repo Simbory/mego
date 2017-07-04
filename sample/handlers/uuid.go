@@ -5,7 +5,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func testUUID(_ *mego.HttpCtx) interface{} {
+func testUUID(ctx *mego.HttpCtx) interface{} {
 	data := make(map[int]interface{}, 1000)
 	for i := 0; i < 1000; i++ {
 		id := uuid.New()
@@ -15,5 +15,5 @@ func testUUID(_ *mego.HttpCtx) interface{} {
 			Type string `json:"type"`
 		}{id.String(), t}
 	}
-	return data
+	return ctx.JsonResult(data)
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"os"
 	"log"
+	"path"
 )
 
 const Version = "1.0"
@@ -25,6 +26,24 @@ func strAdd(arr ...string) string {
 		return ""
 	}
 	return strings.Join(arr, "")
+}
+
+func ClearPath(pathStr string) string {
+	return path.Clean(strings.Replace(pathStr, "\\", "/", -1))
+}
+
+func EnsurePrefix(s, prefix string) string {
+	if !strings.HasPrefix(s, prefix) {
+		return strAdd(prefix, s)
+	}
+	return s
+}
+
+func EnsureSuffix(s, suffix string) string {
+	if !strings.HasSuffix(s, suffix) {
+		return strAdd(s, suffix)
+	}
+	return s
 }
 
 func ExeDir() string {

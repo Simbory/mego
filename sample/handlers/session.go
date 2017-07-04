@@ -22,19 +22,19 @@ func testSession(ctx *mego.HttpCtx) interface{} {
 	}
 	if data != nil && ok {
 		msg, _ = data.(string)
-		return map[string]interface{}{
+		return ctx.JsonResult(map[string]interface{}{
 			"msg":         msg,
 			"fromSession": true,
 			"user":        user,
-		}
+		})
 	}
 	msg = "Hello, world"
 	user = &userModel{"Simbory", "Lu"}
 	sessionStore.Set("msg", msg)
 	sessionStore.Set("user", user)
-	return map[string]interface{}{
+	return ctx.JsonResult(map[string]interface{}{
 		"msg":         msg,
 		"user":        user,
 		"fromSession": false,
-	}
+	})
 }

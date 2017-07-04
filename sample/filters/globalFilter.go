@@ -3,5 +3,5 @@ package filters
 import "github.com/simbory/mego"
 
 func globalFilter(ctx *mego.HttpCtx) {
-	ctx.SetItem("user", "Simbory")
+	ctx.SetCtxItem("user", "Simbory")
 }

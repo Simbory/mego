@@ -7,19 +7,24 @@ import (
 	"net/url"
 	"mime/multipart"
 	"mime"
+	"encoding/xml"
+	"github.com/simbory/mego/assert"
+	"regexp"
+	"fmt"
+	"encoding/json"
 )
 
 type sizer interface {
 	Size() int64
 }
 
-// HttpCtx the mego context struct
+// HttpCtx the mego http context struct
 type HttpCtx struct {
 	req       *http.Request
 	res       http.ResponseWriter
 	routeData map[string]string
 	ended     bool
-	items     map[string]interface{}
+	ctxItems  map[string]interface{}
 	server    *Server
 	area      *Area
 }
@@ -112,36 +117,107 @@ func (ctx *HttpCtx) PostFile(formName string) *UploadFile {
 	return &UploadFile{FileName: h.Filename, Size: size, File: f, Header: h}
 }
 
-// SetItem add context data to mego context
-func (ctx *HttpCtx) SetItem(key string, data interface{}) {
+// SetCtxItem add context data to mego context
+func (ctx *HttpCtx) SetCtxItem(key string, data interface{}) {
 	if len(key) == 0 {
 		return
 	}
-	if ctx.items == nil {
-		ctx.items = make(map[string]interface{})
+	if ctx.ctxItems == nil {
+		ctx.ctxItems = make(map[string]interface{})
 	}
-	ctx.items[key] = data
+	ctx.ctxItems[key] = data
 }
 
-// GetItem get the context data from mego context by key
-func (ctx *HttpCtx) GetItem(key string) interface{} {
-	if ctx.items == nil {
+// GetCtxItem get the context data from mego context by key
+func (ctx *HttpCtx) GetCtxItem(key string) interface{} {
+	if ctx.ctxItems == nil {
 		return nil
 	}
-	return ctx.items[key]
+	return ctx.ctxItems[key]
 }
 
 // RemoveItem delete context item from mego context by key
 func (ctx *HttpCtx) RemoveItem(key string) interface{} {
-	if ctx.items == nil {
+	if ctx.ctxItems == nil {
 		return nil
 	}
-	data := ctx.items[key]
-	delete(ctx.items, key)
+	data := ctx.ctxItems[key]
+	delete(ctx.ctxItems, key)
 	return data
 }
 func (ctx *HttpCtx) MapPath(path string) string {
 	return ctx.server.MapRootPath(path)
+}
+
+// TextResult generate the mego result as plain text
+func (ctx *HttpCtx) TextResult(content, contentType string) Result {
+	result := NewBufResult(nil)
+	result.WriteString(content)
+	result.ContentType = contentType
+	return result
+}
+
+// JsonResult generate the mego result as JSON string
+func (ctx *HttpCtx) JsonResult(data interface{}) Result {
+	dataJSON, err := json.Marshal(data)
+	assert.PanicErr(err)
+	return ctx.TextResult(byte2Str(dataJSON), "application/json")
+}
+
+// JsonpResult generate the mego result as jsonp string
+func (ctx *HttpCtx) JsonpResult(data interface{}, callback string) Result {
+	reg := regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
+	if !reg.Match(str2Byte(callback)) {
+		panic(fmt.Errorf("Invalid JSONP callback name %s", callback))
+	}
+	dataJSON, err := json.Marshal(data)
+	assert.PanicErr(err)
+	return ctx.TextResult(strAdd(callback, "(", byte2Str(dataJSON), ");"), "text/javascript")
+}
+
+// XmlResult generate the mego result as XML string
+func (ctx *HttpCtx) XmlResult (data interface{}) Result {
+	xmlBytes, err := xml.Marshal(data)
+	assert.PanicErr(err)
+	return ctx.TextResult(byte2Str(xmlBytes), "text/xml")
+}
+
+// FileResult generate the mego result as file result
+func (ctx *HttpCtx) FileResult(path string, contentType string) Result {
+	var resp = &FileResult{
+		FilePath:    path,
+		ContentType: contentType,
+	}
+	return resp
+}
+
+// ViewResult find the view by view name, execute the view template and get the result
+func (ctx *HttpCtx) ViewResult (viewName string, data interface{}) Result {
+	if ctx.area != nil {
+		ctx.area.initViewEngine()
+		return ctx.area.viewEngine.Render(viewName, data)
+	} else {
+		ctx.server.initViewEngine()
+		return ctx.server.viewEngine.Render(viewName, data)
+	}
+}
+
+func redirect(url string, statusCode int) *RedirectResult {
+	var resp = &RedirectResult{
+		StatusCode:  statusCode,
+		RedirectURL: url,
+	}
+	return resp
+}
+
+// Redirect redirect as 302 status code
+func (ctx *HttpCtx) Redirect(url string) Result {
+	return redirect(url, 302)
+}
+
+// RedirectPermanent redirect as 301 status
+func (ctx *HttpCtx) RedirectPermanent(url string) Result {
+	return redirect(url, 301)
 }
 
 // End end the mego context and stop the rest request function
