@@ -8,10 +8,12 @@ import (
 	"github.com/google/uuid"
 	"encoding/gob"
 	"github.com/simbory/mego/assert"
+	"sync"
 )
 
 type Config struct {
 	CookieName      string `xml:"cookieName,attr"`
+	CookiePath      string `xml:"cookiePath,attr"`
 	EnableSetCookie bool   `xml:"enableSetCookie,attr"`
 	GcLifetime      int64  `xml:"gcLifetime,attr"`
 	MaxLifetime     int64  `xml:"maxLifetime,attr"`
@@ -24,8 +26,25 @@ type Config struct {
 
 // Manager the session manager struct
 type Manager struct {
-	provider Provider
-	config   *Config
+	provider    Provider
+	config      *Config
+	initialized bool
+	lock        sync.RWMutex
+}
+
+func (manager *Manager) initialize() {
+	// Double-Check Locking
+	if manager.initialized {
+		return
+	}
+	manager.lock.Lock()
+	defer manager.lock.Unlock()
+	if manager.initialized {
+		return
+	}
+	assert.PanicErr(manager.provider.Init(manager.config.GcLifetime, manager.config.ProviderConfig))
+	go manager.gc()
+	manager.initialized = true
 }
 
 func (manager *Manager) getSessionID(r *http.Request) (string, error) {
@@ -57,18 +76,19 @@ func (manager *Manager) GetSessionStore(sid string) (sessions Storage) {
 	return
 }
 
-// GC Start session gc process.
+// gc Start session gc process.
 // it can do gc in times after gc lifetime.
-func (manager *Manager) GC() {
+func (manager *Manager) gc() {
 	manager.provider.GC()
-	time.AfterFunc(time.Duration(manager.config.GcLifetime)*time.Second, func() { manager.GC() })
+	time.AfterFunc(time.Duration(manager.config.GcLifetime)*time.Second, func() {
+		manager.gc()
+	})
 }
-
-
 
 // Start generate or read the session id from http request.
 // if session id exists, return Storage with this id.
 func (manager *Manager) Start(ctx *mego.HttpCtx) Storage {
+	manager.initialize()
 	r := ctx.Request()
 	w := ctx.Response()
 	id, err := manager.getSessionID(r)
@@ -84,7 +104,7 @@ func (manager *Manager) Start(ctx *mego.HttpCtx) Storage {
 	cookie := &http.Cookie{
 		Name:     manager.config.CookieName,
 		Value:    url.QueryEscape(id),
-		Path:     "/",
+		Path:     manager.config.CookiePath,
 		HttpOnly: manager.config.HTTPOnly,
 		Secure:   manager.isSecure(r),
 	}
@@ -104,6 +124,7 @@ func (manager *Manager) Start(ctx *mego.HttpCtx) Storage {
 
 // Destroy Destroy session by its id in http request cookie.
 func (manager *Manager) Destroy(ctx *mego.HttpCtx) {
+	manager.initialize()
 	r := ctx.Request()
 	w := ctx.Response()
 	cookie, err := r.Cookie(manager.config.CookieName)
@@ -113,11 +134,11 @@ func (manager *Manager) Destroy(ctx *mego.HttpCtx) {
 	sid, _ := url.QueryUnescape(cookie.Value)
 	manager.provider.Destroy(sid)
 	if manager.config.EnableSetCookie {
-		expiration := time.Now()
+		expiration := time.Now().Add(-10000)
 		cookie = &http.Cookie{
 			Name:     manager.config.CookieName,
-			Path:     "/",
-			HttpOnly: true,
+			Path:     manager.config.CookiePath,
+			HttpOnly: manager.config.HTTPOnly,
 			Expires:  expiration,
 			MaxAge:   -1,
 		}
@@ -127,6 +148,7 @@ func (manager *Manager) Destroy(ctx *mego.HttpCtx) {
 
 // RegenerateID Regenerate a session id for this Storage who's id is saving in http request.
 func (manager *Manager) RegenerateID(ctx *mego.HttpCtx) (session Storage) {
+	manager.initialize()
 	r := ctx.Request()
 	w := ctx.Response()
 	sid := newSessionId()
@@ -134,9 +156,10 @@ func (manager *Manager) RegenerateID(ctx *mego.HttpCtx) (session Storage) {
 	if err != nil || cookie.Value == "" {
 		//delete old cookie
 		session = manager.provider.Read(sid)
-		cookie = &http.Cookie{Name: manager.config.CookieName,
+		cookie = &http.Cookie{
+			Name: manager.config.CookieName,
 			Value:                  url.QueryEscape(sid),
-			Path:                   "/",
+			Path:                   manager.config.CookiePath,
 			HttpOnly:               manager.config.HTTPOnly,
 			Secure:                 manager.isSecure(r),
 			Domain:                 manager.config.Domain,
@@ -161,24 +184,6 @@ func (manager *Manager) RegenerateID(ctx *mego.HttpCtx) (session Storage) {
 
 func (manager *Manager) RegisterType(name string, value interface{}) {
 	gob.RegisterName(name, value)
-}
-
-func newSessionManager(server *mego.Server, config *Config, provider Provider) *Manager {
-	config.EnableSetCookie = true
-	if config.MaxLifetime == 0 {
-		config.MaxLifetime = config.GcLifetime
-	}
-	if server != nil {
-		server.OnStart(func() {
-			assert.PanicErr(provider.Init(config.MaxLifetime, config.ProviderConfig))
-		})
-	} else {
-		assert.PanicErr(provider.Init(config.MaxLifetime, config.ProviderConfig))
-	}
-	return &Manager{
-		provider: provider,
-		config:   config,
-	}
 }
 
 func newSessionId() string {

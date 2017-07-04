@@ -14,18 +14,35 @@ func UseAsDefault(manager *Manager) {
 	defaultManager = manager
 }
 
-func CreateManager(server *mego.Server, config *Config, provider Provider) *Manager {
-	assert.NotNil("server", server)
+func CreateManager(config *Config, provider Provider) *Manager {
 	assert.NotNil("provider", provider)
 	if config == nil {
 		config = new(Config)
-		config.CookieName = "SESSION_ID"
-		config.GcLifetime = 3600
-		config.MaxLifetime = 3600
 		config.HTTPOnly = true
 	}
-	m := newSessionManager(server, config, provider)
-	go m.GC()
+	if len(config.CookieName) == 0 {
+		config.CookieName = "SESSION_ID"
+	}
+	if config.GcLifetime <= 0 {
+		config.GcLifetime = 3600
+	}
+	if config.MaxLifetime <= 0 {
+		config.MaxLifetime = 3600
+	}
+	if len(config.CookiePath) == 0 {
+		config.CookiePath = "/"
+	}
+
+	if config.MaxLifetime < config.GcLifetime {
+		config.MaxLifetime = config.GcLifetime
+	}
+	config.EnableSetCookie = true
+
+	assert.PanicErr(provider.Init(config.MaxLifetime, config.ProviderConfig))
+	m := &Manager{
+		provider: provider,
+		config:   config,
+	}
 	return m
 }
 
