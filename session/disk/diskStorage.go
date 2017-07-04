@@ -131,7 +131,7 @@ func (st *storage) saveValue() {
 	go func() {
 		var err error
 		if st.value == nil || len(st.value) == 0 {
-			os.Remove(st.diskFile())
+			st.delFile()
 		} else {
 			buf := bytes.NewBuffer(nil)
 			gobEncoder := gob.NewEncoder(buf)
