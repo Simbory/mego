@@ -38,7 +38,6 @@ func CreateManager(config *Config, provider Provider) *Manager {
 	}
 	config.EnableSetCookie = true
 
-	assert.PanicErr(provider.Init(config.MaxLifetime, config.ProviderConfig))
 	m := &Manager{
 		provider: provider,
 		config:   config,
