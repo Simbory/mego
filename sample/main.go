@@ -15,7 +15,7 @@ func main() {
 
 	cache.UseDefault()
 	provider := disk.NewProvider(server.MapRootPath("/temp/sessions"))
-	mgr := session.CreateManager(server,nil, provider)
+	mgr := session.CreateManager(nil, provider)
 	session.UseAsDefault(mgr)
 
 	handlers.Init(server)

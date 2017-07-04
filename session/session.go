@@ -2,7 +2,6 @@ package session
 
 import (
 	"errors"
-	"github.com/simbory/mego"
 	"github.com/simbory/mego/assert"
 )
 
