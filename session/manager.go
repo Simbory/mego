@@ -182,7 +182,11 @@ func (manager *Manager) RegenerateID(ctx *mego.HttpCtx) (session Storage) {
 	return
 }
 
-func (manager *Manager) RegisterType(name string, value interface{}) {
+func RegisterType(value interface{}) {
+	gob.Register(value)
+}
+
+func RegisterTypeName(name string, value interface{}) {
 	gob.RegisterName(name, value)
 }
 

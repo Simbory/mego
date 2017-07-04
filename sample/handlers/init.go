@@ -12,5 +12,5 @@ func Init(server *mego.Server) {
 	server.Get("/session", testSession)
 	server.Get("/uuid", testUUID)
 	server.Any("/filter/*pathInfo", testFilter)
-	session.Default().RegisterType("UserModel", &userModel{})
+	session.RegisterType(&userModel{})
 }
