@@ -42,8 +42,6 @@ type pathType uint8
 // RouteOpt the route option struct
 type RouteOpt interface {
 	Validation() string
-	HasDefaultValue() bool
-	DefaultValue() string
 	Setting() string
 	MaxLength() int
 	MinLength() int
@@ -51,8 +49,6 @@ type RouteOpt interface {
 
 type routeOpt struct {
 	validation      string
-	hasDefaultValue bool
-	defaultValue    string
 	setting         string
 	maxLength       int
 	minLength       int
@@ -60,14 +56,6 @@ type routeOpt struct {
 
 func (opt *routeOpt) Validation() string {
 	return opt.validation
-}
-
-func (opt *routeOpt) HasDefaultValue() bool {
-	return opt.hasDefaultValue
-}
-
-func (opt *routeOpt) DefaultValue() string {
-	return opt.defaultValue
 }
 
 func (opt *routeOpt) Setting() string {
@@ -158,36 +146,6 @@ func (node *routeNode) isParamPath(path string) bool {
 	return strings.HasPrefix(path, paramBeginStr) && strings.HasSuffix(path, paramEndStr)
 }
 
-func (node *routeNode) detectDefault() (bool, map[string]ReqHandler, map[string]string, *Area) {
-	if !node.hasChildren() {
-		return false, nil, nil, nil
-	}
-	for _, child := range node.Children {
-		if child.NodeType != param || len(child.PathSplits) != 1 || !node.isParamPath(child.PathSplits[0]) {
-			continue
-		}
-		paramName := ""
-		var opt RouteOpt
-		for name, o := range child.Params {
-			paramName = name
-			opt = o
-			break
-		}
-		if !opt.HasDefaultValue() {
-			continue
-		}
-		if child.handlers != nil {
-			return true, child.handlers, map[string]string{paramName: opt.DefaultValue()}, child.area
-		}
-		found, ctrl, routeMap, area := child.detectDefault()
-		if found {
-			routeMap[paramName] = opt.DefaultValue()
-			return true, ctrl, routeMap, area
-		}
-	}
-	return false, nil, nil, nil
-}
-
 func newRouteNode(routePath, method string, area *Area, handler ReqHandler) (*routeNode, error) {
 	err := checkRoutePath(routePath)
 	if err != nil {
@@ -242,7 +200,7 @@ func newRouteNode(routePath, method string, area *Area, handler ReqHandler) (*ro
 			return nil, errors.New("Invalid URL route parameter '" + current.Path + "'")
 		}
 		if current.NodeType == catchAll && len(current.Children) > 0 {
-			return nil, errors.New("Invalid route'" + routePath + ". " +
+			return nil, errors.New("Invalid route '" + routePath + ". " +
 				"The '*pathInfo' parameter should be at the end of the route. " +
 				"For example: '/shell/*pathInfo'.")
 		}
@@ -317,10 +275,7 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 					paramName := dynPath[1 : len(dynPath)-1]
 					opt := indexNode.Params[paramName]
 					if len(validationStr) == 0 {
-						if !opt.HasDefaultValue() {
-							return
-						}
-						routeData[paramName] = opt.DefaultValue()
+						return
 					} else {
 						validateFunc := tree.funcMap[opt.Validation()]
 						if validateFunc == nil {
@@ -373,21 +328,9 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 		area = indexNode.area
 		// detect default value
 		if handler == nil {
-			f, c, rm, a := indexNode.detectDefault()
-			if f {
-				found = true
-				handler = c
-				area = a
-				if rm != nil {
-					for key, value := range rm {
-						routeMap[key] = value
-					}
-				}
-			} else {
-				found = false
-				routeMap = nil
-				handler = nil
-			}
+			found = false
+			routeMap = nil
+			handler = nil
 		} else {
 			found = true
 		}
@@ -419,10 +362,6 @@ func (tree *routeTree) lookup(urlPath string) (map[string]ReqHandler, map[string
 	if urlPath == "/" {
 		handler := tree.handlers
 		if handler == nil {
-			f, c, r, a := tree.detectDefault()
-			if f {
-				return c, r, a, nil
-			}
 			return nil, nil, nil, nil
 		}
 		return tree.handlers, nil, tree.area, nil
@@ -638,17 +577,6 @@ func analyzeParamOption(path string) ([]string, map[string]RouteOpt, error) {
 				return nil, nil, errors.New("Invalid route parameter setting: " + sp)
 			}
 			opt := &routeOpt{}
-			var eqIndex = strings.Index(paramName, "=")
-			if eqIndex > 0 {
-				defaultValue := paramName[eqIndex+1:]
-				paramName = paramName[0:eqIndex]
-				opt.defaultValue = defaultValue
-				opt.hasDefaultValue = true
-			} else if !checkParamName(paramName) {
-				return nil, nil, errors.New("Invalid route parameter name '" + paramName + "': " + sp)
-			} else {
-				opt.hasDefaultValue = false
-			}
 			if checkParamName(paramOptionStr) {
 				opt.validation = paramOptionStr
 				opt.maxLength = 255

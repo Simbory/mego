@@ -20,6 +20,8 @@ type routeSetting struct {
 	area       *Area
 }
 
+type endSignal struct {}
+
 type Server struct {
 	webRoot       string
 	contentRoot   string
@@ -33,7 +35,6 @@ type Server struct {
 	err403Handler http.HandlerFunc
 	filters       filterContainer
 	routeSettings []*routeSetting
-	maxFormSize   int64
 	viewEngine    *ViewEngine
 	engineLock    *sync.RWMutex
 	urlSuffix     string
@@ -45,14 +46,9 @@ type Server struct {
 //
 // addr: the address the server is listen on
 //
-// maxFormSize: the max form size. the default is 32M
-//
 // urlSuffix: the dynamic url suffix. if this value is empty, all the dynamic url
 // should be like 'https://example.com/path/to/url' or 'https://example.com/path/to/url/'
-func NewServer(webRoot, addr string, maxFormSize int64, urlSuffix string) *Server {
-	if maxFormSize <= 0 {
-		maxFormSize = 32 << 20
-	}
+func NewServer(webRoot, addr string, urlSuffix string) *Server {
 	webRoot = path.Clean(strings.Replace(webRoot, "\\", "/", -1))
 	var s = &Server{
 		webRoot: webRoot,
@@ -67,7 +63,6 @@ func NewServer(webRoot, addr string, maxFormSize int64, urlSuffix string) *Serve
 		err403Handler: handle403,
 		filters: make(filterContainer),
 		engineLock: &sync.RWMutex{},
-		maxFormSize: maxFormSize,
 		urlSuffix: urlSuffix,
 	}
 	return s
@@ -151,10 +146,12 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 			area: area,
 		}
 		// auto parse post form data
+		/*
 		if ctx.req.Method == "POST" || ctx.req.Method == "PUT" || ctx.req.Method == "PATCH" {
 			err := ctx.parseForm()
 			assert.PanicErr(err)
 		}
+		*/
 		s.filters.exec(urlPath, ctx)
 		if ctx.ended {
 			return &emptyResult{}
@@ -232,6 +229,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		rec := recover()
 		if rec == nil {
+			return
+		}
+		if _,ok := rec.(*endSignal); ok {
 			return
 		}
 		s.err500Handler(w, r, rec)

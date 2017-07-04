@@ -1,5 +1,7 @@
 package mego
 
+import "strings"
+
 type filterKey struct {
 	pathPrefix string
 	matchAll   bool
@@ -7,9 +9,9 @@ type filterKey struct {
 
 func (fk *filterKey) canExec(urlPath string) bool {
 	if fk.matchAll {
-		return pathHasPrefix(urlPath, fk.pathPrefix)
+		return strings.HasPrefix(urlPath, fk.pathPrefix)
 	} else {
-		return pathEq(fk.pathPrefix, urlPath)
+		return urlPath == fk.pathPrefix
 	}
 }
 

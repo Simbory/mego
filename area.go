@@ -78,6 +78,7 @@ func (a *Area)Any(routePath string, handler ReqHandler) {
 	a.server.addAreaRoute("*", a.fixPath(routePath), a, handler)
 }
 
+// HandleFilter handle the filter func in current area
 func (a *Area) HandleFilter(pathPrefix string, h func(*HttpCtx)) {
 	a.server.assertUnlocked()
 	assert.NotEmpty("pathPrefix", pathPrefix)

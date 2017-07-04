@@ -4,9 +4,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"net/url"
-	"mime/multipart"
-	"mime"
 	"encoding/xml"
 	"github.com/simbory/mego/assert"
 	"regexp"
@@ -145,8 +142,15 @@ func (ctx *HttpCtx) RemoveItem(key string) interface{} {
 	delete(ctx.ctxItems, key)
 	return data
 }
-func (ctx *HttpCtx) MapPath(path string) string {
+
+// MapRootPath Returns the physical file path that corresponds to the specified virtual path.
+func (ctx *HttpCtx) MapRootPath(path string) string {
 	return ctx.server.MapRootPath(path)
+}
+
+// MapContentPath Returns the physical file path that corresponds to the specified virtual path.
+func (ctx *HttpCtx) MapContentPath(urlPath string) string {
+	return ctx.server.MapContentPath(urlPath)
 }
 
 // TextResult generate the mego result as plain text
@@ -202,75 +206,33 @@ func (ctx *HttpCtx) ViewResult (viewName string, data interface{}) Result {
 	}
 }
 
-func redirect(url string, statusCode int) *RedirectResult {
-	var resp = &RedirectResult{
-		StatusCode:  statusCode,
-		RedirectURL: url,
+func (ctx *HttpCtx) Redirect(urlStr string, permanent bool) {
+	if permanent {
+		http.Redirect(ctx.res, ctx.req, urlStr, 301)
+	} else {
+		http.Redirect(ctx.res, ctx.req, urlStr, 302)
 	}
-	return resp
+	ctx.End()
 }
 
-// Redirect redirect as 302 status code
-func (ctx *HttpCtx) Redirect(url string) Result {
-	return redirect(url, 302)
-}
-
-// RedirectPermanent redirect as 301 status
-func (ctx *HttpCtx) RedirectPermanent(url string) Result {
-	return redirect(url, 301)
+// Redirect get the redirect result. if the value of 'permanent' is true ,
+// the status code is 301, else the status code is 302
+func (ctx *HttpCtx) RedirectResult(urlStr string, permanent bool) Result {
+	if permanent {
+		return &RedirectResult{
+			StatusCode:  301,
+			RedirectURL: urlStr,
+		}
+	} else {
+		return &RedirectResult{
+			StatusCode:  302,
+			RedirectURL: urlStr,
+		}
+	}
 }
 
 // End end the mego context and stop the rest request function
 func (ctx *HttpCtx) End() {
 	ctx.ended = true
-}
-
-// parseForm parse the post form (both multipart and normal form)
-func (ctx *HttpCtx) parseForm() error {
-	isMultipart, reader, err := ctx.multipart()
-	if err != nil {
-		return err
-	}
-	if isMultipart {
-		if ctx.req.MultipartForm != nil {
-			return nil
-		}
-		if ctx.req.Form == nil {
-			if err = ctx.req.ParseForm(); err != nil {
-				return err
-			}
-		}
-		f,err := reader.ReadForm(ctx.server.maxFormSize)
-		if err != nil {
-			return err
-		}
-		if ctx.req.PostForm == nil {
-			ctx.req.PostForm = make(url.Values)
-		}
-		for k, v := range f.Value {
-			ctx.req.Form[k] = append(ctx.req.Form[k], v...)
-			// r.PostForm should also be populated. See Issue 9305.
-			ctx.req.PostForm[k] = append(ctx.req.PostForm[k], v...)
-		}
-		ctx.req.MultipartForm = f
-	} else {
-		return ctx.req.ParseForm()
-	}
-	return nil
-}
-
-func (ctx *HttpCtx) multipart() (bool,*multipart.Reader,error) {
-	v := ctx.req.Header.Get("Content-Type")
-	if v == "" {
-		return false, nil, nil
-	}
-	d, params, err := mime.ParseMediaType(v)
-	if err != nil || d != "multipart/form-data" {
-		return false, nil, nil
-	}
-	boundary, ok := params["boundary"]
-	if !ok {
-		return true, nil, http.ErrMissingBoundary
-	}
-	return true, multipart.NewReader(ctx.req.Body, boundary), nil
+	panic(&endSignal{})
 }
