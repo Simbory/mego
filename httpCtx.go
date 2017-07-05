@@ -119,6 +119,10 @@ func (ctx *HttpCtx) SetCtxItem(key string, data interface{}) {
 	if len(key) == 0 {
 		return
 	}
+	if data == nil {
+		ctx.RemoveCtxItem(key)
+		return
+	}
 	if ctx.ctxItems == nil {
 		ctx.ctxItems = make(map[string]interface{})
 	}
@@ -133,14 +137,13 @@ func (ctx *HttpCtx) GetCtxItem(key string) interface{} {
 	return ctx.ctxItems[key]
 }
 
-// RemoveItem delete context item from mego context by key
-func (ctx *HttpCtx) RemoveItem(key string) interface{} {
+// RemoveCtxItem delete context item from mego context by key
+func (ctx *HttpCtx) RemoveCtxItem(key string) {
 	if ctx.ctxItems == nil {
-		return nil
+		return
 	}
-	data := ctx.ctxItems[key]
+	ctx.ctxItems[key] = nil
 	delete(ctx.ctxItems, key)
-	return data
 }
 
 // MapRootPath Returns the physical file path that corresponds to the specified virtual path.

@@ -40,6 +40,7 @@ func CreateManager(config *Config, provider Provider) *Manager {
 	m := &Manager{
 		provider: provider,
 		config:   config,
+		managerID: newGuidStr(),
 	}
 	return m
 }

@@ -30,6 +30,7 @@ type Manager struct {
 	config      *Config
 	initialized bool
 	lock        sync.RWMutex
+	managerID   string
 }
 
 func (manager *Manager) initialize() {
@@ -70,12 +71,6 @@ func (manager *Manager) isSecure(req *http.Request) bool {
 	return true
 }
 
-// GetSessionStore Get Storage by its id.
-func (manager *Manager) GetSessionStore(sid string) (sessions Storage) {
-	sessions = manager.provider.Read(sid)
-	return
-}
-
 // gc Start session gc process.
 // it can do gc in times after gc lifetime.
 func (manager *Manager) gc() {
@@ -88,6 +83,12 @@ func (manager *Manager) gc() {
 // Start generate or read the session id from http request.
 // if session id exists, return Storage with this id.
 func (manager *Manager) Start(ctx *mego.HttpCtx) Storage {
+	storage := ctx.GetCtxItem(manager.managerID)
+	if storage != nil {
+		if storageData, ok := storage.(Storage); ok {
+			return storageData
+		}
+	}
 	manager.initialize()
 	r := ctx.Request()
 	w := ctx.Response()
@@ -99,7 +100,7 @@ func (manager *Manager) Start(ctx *mego.HttpCtx) Storage {
 		return manager.provider.Read(id)
 	}
 	// Generate a new store
-	id = newSessionId()
+	id = newGuidStr()
 	store := manager.provider.Read(id)
 	cookie := &http.Cookie{
 		Name:     manager.config.CookieName,
@@ -119,11 +120,13 @@ func (manager *Manager) Start(ctx *mego.HttpCtx) Storage {
 		http.SetCookie(w, cookie)
 	}
 	r.AddCookie(cookie)
+	ctx.SetCtxItem(manager.managerID, store)
 	return store
 }
 
 // Destroy Destroy session by its id in http request cookie.
 func (manager *Manager) Destroy(ctx *mego.HttpCtx) {
+	ctx.RemoveCtxItem(manager.managerID)
 	manager.initialize()
 	r := ctx.Request()
 	w := ctx.Response()
@@ -151,7 +154,7 @@ func (manager *Manager) RegenerateID(ctx *mego.HttpCtx) (session Storage) {
 	manager.initialize()
 	r := ctx.Request()
 	w := ctx.Response()
-	sid := newSessionId()
+	sid := newGuidStr()
 	cookie, err := r.Cookie(manager.config.CookieName)
 	if err != nil || cookie.Value == "" {
 		//delete old cookie
@@ -179,6 +182,7 @@ func (manager *Manager) RegenerateID(ctx *mego.HttpCtx) (session Storage) {
 		http.SetCookie(w, cookie)
 	}
 	r.AddCookie(cookie)
+	ctx.SetCtxItem(manager.managerID, session)
 	return
 }
 
@@ -190,7 +194,7 @@ func RegisterTypeName(name string, value interface{}) {
 	gob.RegisterName(name, value)
 }
 
-func newSessionId() string {
+func newGuidStr() string {
 	id,err := uuid.NewUUID()
 	assert.PanicErr(err)
 	return id.String()
