@@ -24,6 +24,12 @@ type HttpCtx struct {
 	ctxItems  map[string]interface{}
 	server    *Server
 	area      *Area
+	ctxId     uint64
+}
+
+// CtxId get the http context id
+func (ctx *HttpCtx) CtxId() uint64 {
+	return ctx.ctxId
 }
 
 // Request get the mego request
@@ -237,5 +243,5 @@ func (ctx *HttpCtx) RedirectResult(urlStr string, permanent bool) Result {
 // End end the mego context and stop the rest request function
 func (ctx *HttpCtx) End() {
 	ctx.ended = true
-	panic(&endSignal{})
+	panic(&endCtxSignal{})
 }

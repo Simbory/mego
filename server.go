@@ -8,6 +8,7 @@ import (
 	"strings"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"path"
 	"os"
 	"github.com/simbory/mego/assert"
@@ -20,7 +21,7 @@ type routeSetting struct {
 	area       *Area
 }
 
-type endSignal struct {}
+type endCtxSignal struct {}
 
 type Server struct {
 	webRoot       string
@@ -38,6 +39,7 @@ type Server struct {
 	viewEngine    *ViewEngine
 	engineLock    *sync.RWMutex
 	urlSuffix     string
+	ctxId         uint64
 }
 
 // NewServer create a new server
@@ -138,20 +140,15 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 		}
 	}
 	if handler != nil && ok {
+		ctxId := atomic.AddUint64(&(s.ctxId), 1)
 		var ctx = &HttpCtx{
 			req:       r,
 			res:       w,
 			routeData: routeData,
 			server:    s,
-			area: area,
+			area:      area,
+			ctxId:     ctxId,
 		}
-		// auto parse post form data
-		/*
-		if ctx.req.Method == "POST" || ctx.req.Method == "PUT" || ctx.req.Method == "PATCH" {
-			err := ctx.parseForm()
-			assert.PanicErr(err)
-		}
-		*/
 		s.filters.exec(urlPath, ctx)
 		if ctx.ended {
 			return &emptyResult{}
@@ -231,7 +228,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if rec == nil {
 			return
 		}
-		if _,ok := rec.(*endSignal); ok {
+		if _,ok := rec.(*endCtxSignal); ok {
 			return
 		}
 		s.err500Handler(w, r, rec)
