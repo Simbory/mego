@@ -97,6 +97,7 @@ func (ctx *HttpCtx) RouteBool(key string) bool {
 	return true
 }
 
+// PostFile get the post file info
 func (ctx *HttpCtx) PostFile(formName string) *UploadFile {
 	f, h, err := ctx.Request().FormFile(formName)
 	if err != nil {

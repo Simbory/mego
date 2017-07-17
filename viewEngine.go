@@ -6,6 +6,7 @@ import (
 	"github.com/simbory/mego/assert"
 )
 
+// ViewEngine the mego view engine struct
 type ViewEngine struct {
 	engine   *views.ViewEngine
 	viewDir  string
@@ -13,6 +14,7 @@ type ViewEngine struct {
 	viewFunc template.FuncMap
 }
 
+// Render render the view 'viewName' with 'data' and get the view result
 func (e *ViewEngine) Render(viewName string, data interface{}) Result {
 	if e.engine == nil {
 		func(e *ViewEngine) {
@@ -34,6 +36,7 @@ func (e *ViewEngine) Render(viewName string, data interface{}) Result {
 	}
 }
 
+// ExtendView extend the view helper functions with 'name' and 'viewFunc'
 func (e *ViewEngine) ExtendView(name string, viewFunc interface{}) {
 	if len(name) == 0 || viewFunc == nil {
 		return
@@ -41,6 +44,7 @@ func (e *ViewEngine) ExtendView(name string, viewFunc interface{}) {
 	e.viewFunc[name] = viewFunc
 }
 
+// NewViewEngine create a new view engine. the view files is in viewDir and the view file extension is 'viewExt'
 func NewViewEngine(viewDir, viewExt string) *ViewEngine {
 	assert.NotEmpty("viewDir", viewDir)
 	assert.NotEmpty("viewExt", viewExt)

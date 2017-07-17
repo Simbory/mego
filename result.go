@@ -13,6 +13,7 @@ type Result interface {
 	ExecResult(w http.ResponseWriter, r *http.Request)
 }
 
+// BufResult the buffered result
 type BufResult struct {
 	buf         *bytes.Buffer
 	ContentType string
@@ -27,31 +28,37 @@ func (b *BufResult) makeBuf() {
 	}
 }
 
+// Write write byte array p to the result buffer
 func (b *BufResult) Write(p []byte) (n int, err error) {
 	b.makeBuf()
 	return b.buf.Write(p)
 }
 
+// WriteByte write byte c to the result buffer
 func (b *BufResult) WriteByte(c byte) error {
 	b.makeBuf()
 	return b.buf.WriteByte(c)
 }
 
+// WriteString write string s to the result buffer
 func (b *BufResult) WriteString(s string) (n int, err error) {
 	b.makeBuf()
 	return b.buf.WriteString(s)
 }
 
+// WriteRune write rune r to the result buffer
 func (b *BufResult) WriteRune(r rune) (n int, err error) {
 	b.makeBuf()
 	return b.buf.WriteRune(r)
 }
 
+// ReadFrom read the data from reader r and write to the result buffer
 func (b *BufResult) ReadFrom(r io.Reader) (n int64, err error) {
 	b.makeBuf()
 	return b.buf.ReadFrom(r)
 }
 
+// AddHeader write http header to the result
 func (b *BufResult) AddHeader(key, value string) {
 	assert.NotEmpty("key", key)
 	assert.NotEmpty("value", value)
@@ -65,6 +72,7 @@ func (b *BufResult) AddHeader(key, value string) {
 	b.headers[key] = value
 }
 
+// ExecResult write the data in the result buffer to the response writer
 func (b *BufResult) ExecResult(w http.ResponseWriter, r *http.Request) {
 	if len(b.headers) > 0 {
 		for key, value := range b.headers {
@@ -87,12 +95,15 @@ func (b *BufResult) ExecResult(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// NewBufResult create a new buffer result with default value buf
 func NewBufResult(buf *bytes.Buffer) *BufResult {
 	return &BufResult{buf: buf}
 }
 
+// emptyResult the empty buffer result
 type emptyResult struct {}
 
+// ExecResult do nothing
 func (er *emptyResult) ExecResult(w http.ResponseWriter, r *http.Request) {
 }
 

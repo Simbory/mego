@@ -7,6 +7,7 @@ import (
 	"github.com/simbory/mego/assert"
 )
 
+// Area implement mego area
 type Area struct {
 	pathPrefix string
 	server *Server

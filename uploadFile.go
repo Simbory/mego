@@ -6,6 +6,7 @@ import (
 	"io"
 )
 
+// UploadFile the uploaded file struct
 type UploadFile struct {
 	FileName string
 	Size     int64
@@ -14,6 +15,7 @@ type UploadFile struct {
 	Header *multipart.FileHeader
 }
 
+// Save save the posted file data as a file.
 func (file *UploadFile) Save(path string) error {
 	if file.Error != nil {
 		return file.Error
@@ -29,6 +31,7 @@ func (file *UploadFile) Save(path string) error {
 	return err
 }
 
+// SaveAndClose save the posted file as a file and then close the posted data stream
 func (file *UploadFile) SaveAndClose(path string) error {
 	err := file.Save(path)
 	if file.File != nil {
