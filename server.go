@@ -254,7 +254,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	isDynamic := s.isDynamic(urlPath, urlCleanPath)
 	if isDynamic {
 		if urlCleanPath != "/" && len(s.urlSuffix) > 0 {
-			urlCleanPath = strings.TrimRight(urlCleanPath, s.urlSuffix)
+			urlCleanPath = urlCleanPath[0:len(urlCleanPath)-len(s.urlSuffix)]
 		}
 		var result= s.processDynamicRequest(w, r, urlCleanPath)
 		if result != nil {
