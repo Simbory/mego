@@ -1,9 +1,10 @@
 package mego
 
 import (
-	"github.com/simbory/mego/views"
 	"html/template"
+
 	"github.com/simbory/mego/assert"
+	"github.com/simbory/mego/views"
 )
 
 // ViewEngine the mego view engine struct
@@ -18,7 +19,7 @@ type ViewEngine struct {
 func (e *ViewEngine) Render(viewName string, data interface{}) Result {
 	if e.engine == nil {
 		func(e *ViewEngine) {
-			eg,err := views.NewEngine(e.viewDir, e.viewExt)
+			eg, err := views.NewEngine(e.viewDir, e.viewExt)
 			assert.PanicErr(err)
 			for name, f := range e.viewFunc {
 				eg.AddFunc(name, f)
@@ -31,8 +32,8 @@ func (e *ViewEngine) Render(viewName string, data interface{}) Result {
 	}
 	return &viewResult{
 		viewName: viewName,
-		data: data,
-		engine: e.engine,
+		data:     data,
+		engine:   e.engine,
 	}
 }
 
@@ -49,9 +50,9 @@ func NewViewEngine(viewDir, viewExt string) *ViewEngine {
 	assert.NotEmpty("viewDir", viewDir)
 	assert.NotEmpty("viewExt", viewExt)
 	return &ViewEngine{
-		engine: nil,
-		viewDir: viewDir,
-		viewExt: viewExt,
+		engine:   nil,
+		viewDir:  viewDir,
+		viewExt:  viewExt,
 		viewFunc: make(template.FuncMap),
 	}
 }
