@@ -5,91 +5,80 @@ mego route framework
 ```
 package main
 
+import "github.com/simbory/mego"
 import (
-	"os"
-	"time"
-
-	"github.com/simbory/mego"
-	"github.com/simbory/mego/cache"
+	"fmt"
+	"github.com/simbory/mego/session/memory"
 	"github.com/simbory/mego/session"
-	"github.com/simbory/mego/view"
+	"github.com/simbory/mego/cache"
+	"io/ioutil"
+	"time"
 )
 
-func getDate(ctx *mego.Context) interface{} {
-	return &struct {
-		Year  int `json:"year"`
-		Month int `json:"month"`
-		Day   int `json:"day"`
-	}{
-		Year:  int(ctx.RouteParamInt("year")),
-		Month: int(ctx.RouteParamInt("month")),
-		Day:   int(ctx.RouteParamInt("day")),
+func pageFilter(ctx *mego.HttpCtx) {
+	if ctx.Request().URL.Path == "/" {
+		ctx.SetCtxItem("pageName", "home")
 	}
 }
 
-func renderView(ctx *mego.Context) interface{} {
-	msg := cache.Cache().Get("msg")
-	if msg == nil {
-		msg = time.Now().Format(time.RFC1123Z)
-		expire := time.Now().Add(5 * time.Second)
-		cache.Cache().Add("msg", msg, nil, &expire)
-	}
-	viewData := map[string]interface{}{
-		"msg": msg,
-	}
-	return view.View(ctx.RouteParamString("view"), viewData)
+func handleHome(ctx *mego.HttpCtx) interface{} {
+	return ctx.TextResult(
+		fmt.Sprintf("Hello, mego! this is the %s page", ctx.GetCtxItem("pageName")),
+		"text/plain",
+	)
 }
 
-func testSession(ctx *mego.Context) interface{} {
-	sessionStore := session.Start(ctx)
-	var msg string
-	data := sessionStore.Get("msg")
-	if data != nil {
-		msg, _ = data.(string)
-		return &map[string]interface{}{
-			"msg":         msg,
-			"fromSession": true,
+func handleSession(ctx *mego.HttpCtx) interface{} {
+	s := session.Default().Start(ctx)
+	data := s.Get("data")
+	if data == nil {
+		data = "test session data"
+		s.Set("data", data)
+		return map[string]interface{} {
+			"from_session": false,
+			"data": data,
+		}
+	} else {
+		return map[string]interface{} {
+			"from_session": true,
+			"data": data,
 		}
 	}
-	msg = "Hello, world"
-	sessionStore.Set("msg", msg)
-	return &map[string]interface{}{
-		"msg":         msg,
-		"fromSession": false,
-	}
 }
 
-func testFilter(ctx *mego.Context) interface{} {
-	data := ctx.GetItem("user")
-	if data != nil {
-		return data.(string)
+func handleCache(ctx *mego.HttpCtx) interface{} {
+	data := cache.Default().Get("cache_data")
+	if data == nil {
+		data = "test cache data"
+		dataFile := ctx.MapRootPath("/cache-dependency-file.txt")
+		ioutil.WriteFile(dataFile, []byte(data.(string)), 0777)
+		cache.Default().Set("cache_data", data, []string{dataFile}, 1 * time.Hour)
+		return map[string]interface{} {
+			"from_cache": false,
+			"data": data,
+		}
+	} else {
+		return map[string]interface{} {
+			"from_cache": true,
+			"data": data,
+		}
 	}
-	return nil
-}
-
-func workingDir() string {
-	p, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	return p
-}
-
-func globalFilter(ctx *mego.Context) {
-	ctx.SetItem("user", "Simbory")
 }
 
 func main() {
-	cache.UseCache(10 * time.Second)
-	session.UseSession(nil)
-	view.UseView(workingDir() + "/views/")
-	mego.HandleStaticDir("/static/", workingDir() + "/static/")
-	mego.HandleStaticFile("/favicon.ico", workingDir() + "/favicon.ico")
-	mego.Any("/views/<view:word>", renderView)
-	mego.Get("/date/<year:int>-<month:int>-<day:int>", getDate)
-	mego.Get("/session", testSession)
-	mego.Any("/filter/*pathInfo", testFilter)
-	mego.Filter("/*", globalFilter)
-	mego.Run(":8080")
+	server := mego.NewServer(mego.WorkingDir(), ":8080", ".html")
+	server.Get("/", handleHome)
+	server.Get("/test-session", handleSession)
+	server.Get("/test-cache", handleCache)
+	server.HandleFilter("/*", pageFilter)
+
+	sessionProvider := memory.NewProvider()
+	sessionManager := session.CreateManager(nil, sessionProvider)
+	session.UseAsDefault(sessionManager)
+
+	cache.UseDefault()
+
+	server.Run()
 }
+
 ```
