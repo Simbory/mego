@@ -1,12 +1,12 @@
 package admin
 
 import (
-	"github.com/simbory/mego"
 	"fmt"
+	"github.com/simbory/mego"
 	"github.com/simbory/mego/assert"
-	"strings"
 	"github.com/simbory/mego/session"
 	"github.com/simbory/mego/session/memory"
+	"strings"
 )
 
 func getUpload(ctx *mego.HttpCtx) interface{} {
@@ -60,7 +60,7 @@ func Init(server *mego.Server) {
 		s := sessionManager.Start(ctx)
 		userData := s.Get("admin-user")
 		if userData == nil {
-			ctx.Redirect("/admin/login?returnUrl=" + ctx.Request().URL.Path, false)
+			ctx.Redirect("/admin/login?returnUrl="+ctx.Request().URL.Path, false)
 		}
 	})
 }

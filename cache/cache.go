@@ -3,13 +3,13 @@ package cache
 import (
 	"errors"
 	"fmt"
+	"github.com/simbory/mego/assert"
 	"github.com/simbory/mego/fswatcher"
 	"os"
 	"path"
 	"strings"
 	"sync"
 	"time"
-	"github.com/simbory/mego/assert"
 )
 
 var (
@@ -167,7 +167,7 @@ func NewManager(gcInterval time.Duration) *Manager {
 	assert.Assert("gcInterval", func() bool {
 		return gcInterval > 0
 	})
-	fw,err := fswatcher.NewWatcher()
+	fw, err := fswatcher.NewWatcher()
 	if err != nil {
 		fw = nil
 	}

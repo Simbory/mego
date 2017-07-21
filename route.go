@@ -3,11 +3,11 @@ package mego
 import (
 	"errors"
 	"fmt"
+	"github.com/simbory/mego/assert"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
-	"github.com/simbory/mego/assert"
 )
 
 const (
@@ -48,10 +48,10 @@ type RouteOpt interface {
 }
 
 type routeOpt struct {
-	validation      string
-	setting         string
-	maxLength       int
-	minLength       int
+	validation string
+	setting    string
+	maxLength  int
+	minLength  int
 }
 
 func (opt *routeOpt) Validation() string {

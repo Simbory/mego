@@ -3,10 +3,10 @@ package main
 import (
 	"github.com/simbory/mego"
 	"github.com/simbory/mego/cache"
-	"github.com/simbory/mego/session"
 	"github.com/simbory/mego/sample/admin"
-	"github.com/simbory/mego/sample/handlers"
 	"github.com/simbory/mego/sample/filters"
+	"github.com/simbory/mego/sample/handlers"
+	"github.com/simbory/mego/session"
 	"github.com/simbory/mego/session/disk"
 )
 

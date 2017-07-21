@@ -1,14 +1,14 @@
 package mego
 
 import (
+	"encoding/json"
+	"encoding/xml"
+	"fmt"
+	"github.com/simbory/mego/assert"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
-	"encoding/xml"
-	"github.com/simbory/mego/assert"
-	"regexp"
-	"fmt"
-	"encoding/json"
 )
 
 type sizer interface {
@@ -61,7 +61,7 @@ func (ctx *HttpCtx) RouteInt(key string) int64 {
 	if len(rawValue) == 0 {
 		return 0
 	}
-	value,err := strconv.ParseInt(rawValue, 0, 64)
+	value, err := strconv.ParseInt(rawValue, 0, 64)
 	if err != nil {
 		return 0
 	}
@@ -74,7 +74,7 @@ func (ctx *HttpCtx) RouteUint(key string) uint64 {
 	if len(rawValue) == 0 {
 		return 0
 	}
-	value,err := strconv.ParseUint(rawValue, 0, 64)
+	value, err := strconv.ParseUint(rawValue, 0, 64)
 	if err != nil {
 		return 0
 	}
@@ -87,7 +87,7 @@ func (ctx *HttpCtx) RouteFloat(key string) float64 {
 	if len(rawValue) == 0 {
 		return 0
 	}
-	value,err := strconv.ParseFloat(rawValue, 64)
+	value, err := strconv.ParseFloat(rawValue, 64)
 	if err != nil {
 		return 0
 	}
@@ -97,7 +97,7 @@ func (ctx *HttpCtx) RouteFloat(key string) float64 {
 // RouteBool get the route parameter value as boolean by key
 func (ctx *HttpCtx) RouteBool(key string) bool {
 	var rawValue = ctx.RouteString(key)
-	if len(rawValue) == 0 || strings.ToLower(rawValue) == "false" || rawValue == "0"  {
+	if len(rawValue) == 0 || strings.ToLower(rawValue) == "false" || rawValue == "0" {
 		return false
 	}
 	return true
@@ -190,7 +190,7 @@ func (ctx *HttpCtx) JsonpResult(data interface{}, callback string) Result {
 }
 
 // XmlResult generate the mego result as XML string
-func (ctx *HttpCtx) XmlResult (data interface{}) Result {
+func (ctx *HttpCtx) XmlResult(data interface{}) Result {
 	xmlBytes, err := xml.Marshal(data)
 	assert.PanicErr(err)
 	return ctx.TextResult(byte2Str(xmlBytes), "text/xml")
@@ -206,7 +206,7 @@ func (ctx *HttpCtx) FileResult(path string, contentType string) Result {
 }
 
 // ViewResult find the view by view name, execute the view template and get the result
-func (ctx *HttpCtx) ViewResult (viewName string, data interface{}) Result {
+func (ctx *HttpCtx) ViewResult(viewName string, data interface{}) Result {
 	if ctx.area != nil {
 		ctx.area.initViewEngine()
 		return ctx.area.viewEngine.Render(viewName, data)

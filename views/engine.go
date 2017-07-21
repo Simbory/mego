@@ -1,19 +1,19 @@
 package views
 
 import (
-	"html/template"
-	"sync"
-	"path/filepath"
-	"os"
+	"bytes"
+	"errors"
 	"fmt"
+	"github.com/simbory/mego/assert"
+	"github.com/simbory/mego/fswatcher"
+	"html/template"
+	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
-	"io"
-	"errors"
-	"bytes"
-	"github.com/simbory/mego/fswatcher"
-	"github.com/simbory/mego/assert"
+	"sync"
 )
 
 type ViewEngine struct {
@@ -34,7 +34,7 @@ func (engine *ViewEngine) AddFunc(name string, viewFunc interface{}) {
 	if engine.funcMap == nil {
 		engine.funcMap = make(template.FuncMap)
 	}
-	if f,ok := engine.funcMap[name]; !ok || f==nil {
+	if f, ok := engine.funcMap[name]; !ok || f == nil {
 		engine.funcMap[name] = viewFunc
 	}
 }
@@ -60,7 +60,7 @@ func (engine *ViewEngine) getView(name string) (*template.Template, error) {
 	return cache.tpl, cache.err
 }
 
-func (engine *ViewEngine) getDeep(file, parent string, t *template.Template) (*template.Template, [][]string, error){
+func (engine *ViewEngine) getDeep(file, parent string, t *template.Template) (*template.Template, [][]string, error) {
 	var fileAbsPath string
 	if strings.HasPrefix(file, "../") {
 		fileAbsPath = filepath.Join(engine.viewDir, filepath.Dir(parent), file)
@@ -205,11 +205,11 @@ func (engine *ViewEngine) Render(writer io.Writer, viewPath string, viewData int
 			return err
 		}
 	}
-	tpl,err := engine.getView(viewPath)
+	tpl, err := engine.getView(viewPath)
 	if err != nil {
 		return err
 	}
-	if tpl == nil{
+	if tpl == nil {
 		return fmt.Errorf("The view file '%s' cannot be found", viewPath)
 	}
 	err = tpl.Execute(writer, viewData)
@@ -226,7 +226,7 @@ func NewEngine(rootDir, ext string) (*ViewEngine, error) {
 	if !strings.HasPrefix(ext, ".") {
 		ext = "." + ext
 	}
-	w,err := fswatcher.NewWatcher()
+	w, err := fswatcher.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func NewEngine(rootDir, ext string) (*ViewEngine, error) {
 		viewExt: strings.ToLower(ext),
 		watcher: w,
 	}
-	stat,err := os.Stat(engine.viewDir)
+	stat, err := os.Stat(engine.viewDir)
 	if err != nil {
 		return nil, err
 	}

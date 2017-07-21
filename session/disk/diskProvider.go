@@ -1,16 +1,16 @@
 package disk
 
 import (
+	"encoding/gob"
+	"fmt"
+	"github.com/simbory/mego/assert"
+	"github.com/simbory/mego/session"
+	"io/ioutil"
+	"os"
+	"path"
+	"strings"
 	"sync"
 	"time"
-	"os"
-	"fmt"
-	"io/ioutil"
-	"strings"
-	"path"
-	"github.com/simbory/mego/session"
-	"encoding/gob"
-	"github.com/simbory/mego/assert"
 )
 
 // provider Implement the provider interface
@@ -25,7 +25,7 @@ type provider struct {
 func (prov *provider) Init(maxLifeTime int64, _ string) error {
 	prov.savePath = path.Clean(strings.Replace(prov.savePath, "\\", "/", -1))
 	assert.NotEmpty("savePath", prov.savePath)
-	stat,err := os.Stat(prov.savePath)
+	stat, err := os.Stat(prov.savePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			os.MkdirAll(prov.savePath, 0777)
@@ -41,7 +41,7 @@ func (prov *provider) Init(maxLifeTime int64, _ string) error {
 	prov.savePath = prov.savePath
 	prov.sessions = make(map[string]*storage)
 
-	infos,err := ioutil.ReadDir(prov.savePath)
+	infos, err := ioutil.ReadDir(prov.savePath)
 	if err != nil {
 		return err
 	}
@@ -51,10 +51,10 @@ func (prov *provider) Init(maxLifeTime int64, _ string) error {
 				continue
 			}
 			filePath := path.Clean(strings.Replace(info.Name(), "\\", "/", -1))
-			fileName := filePath[strings.LastIndex(filePath, "/") + 1:]
+			fileName := filePath[strings.LastIndex(filePath, "/")+1:]
 			sid := fileName[0:strings.Index(fileName, ".")]
 			storage := prov.newStorage(sid)
-			data:= storage.readValue()
+			data := storage.readValue()
 			if data != nil {
 				storage.timeAccessed = data.Time
 				storage.value = data.Value
@@ -69,10 +69,10 @@ func (prov *provider) Init(maxLifeTime int64, _ string) error {
 
 func (prov *provider) newStorage(sid string) *storage {
 	newStore := &storage{
-		sid: sid,
+		sid:          sid,
 		timeAccessed: time.Now(),
-		value: nil,
-		diskDir: prov.savePath,
+		value:        nil,
+		diskDir:      prov.savePath,
 	}
 	return newStore
 }

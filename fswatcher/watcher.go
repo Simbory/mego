@@ -4,9 +4,9 @@ import (
 	"errors"
 	"github.com/fsnotify/fsnotify"
 	"os"
+	pathPkg "path"
 	"path/filepath"
 	"strings"
-	pathPkg "path"
 )
 
 // Handler the fswatcher handler interface
@@ -29,7 +29,7 @@ type FileWatcher struct {
 // AddWatch add path to watch
 func (fw *FileWatcher) AddWatch(path string, subDir bool) error {
 	path = pathPkg.Clean(strings.Replace(path, "\\", "/", -1))
-	stat,err := os.Stat(path)
+	stat, err := os.Stat(path)
 	if err != nil {
 		return err
 	}

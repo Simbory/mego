@@ -1,10 +1,10 @@
 package memory
 
 import (
-	"sync"
 	"container/list"
-	"time"
 	"github.com/simbory/mego/session"
+	"sync"
+	"time"
 )
 
 // provider Implement the provider interface
@@ -123,7 +123,7 @@ func (prov *provider) GC() {
 
 func NewProvider() session.Provider {
 	return &provider{
-		list: list.New(),
+		list:     list.New(),
 		sessions: make(map[string]*list.Element),
 	}
 }

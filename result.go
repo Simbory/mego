@@ -2,9 +2,9 @@ package mego
 
 import (
 	"bytes"
+	"github.com/simbory/mego/assert"
 	"io"
 	"net/http"
-	"github.com/simbory/mego/assert"
 	"strings"
 )
 
@@ -101,7 +101,7 @@ func NewBufResult(buf *bytes.Buffer) *BufResult {
 }
 
 // emptyResult the empty buffer result
-type emptyResult struct {}
+type emptyResult struct{}
 
 // ExecResult do nothing
 func (er *emptyResult) ExecResult(w http.ResponseWriter, r *http.Request) {

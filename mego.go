@@ -1,12 +1,12 @@
 package mego
 
 import (
+	"github.com/simbory/mego/assert"
 	"net/http"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
-	"path"
-	"github.com/simbory/mego/assert"
 )
 
 // OnStart attach an event handler to the s start event
@@ -18,6 +18,7 @@ func (s *Server) OnStart(h func()) {
 }
 
 var routeNameReg = regexp.MustCompile("^[a-zA-Z][\\w]*$")
+
 // AddRouteFunc add route validation func
 func (s *Server) AddRouteFunc(name string, fun RouteFunc) {
 	s.assertUnlocked()
@@ -92,7 +93,7 @@ func (s *Server) GetArea(pathPrefix string) *Area {
 	prefix = EnsurePrefix(prefix, "/")
 	return &Area{
 		pathPrefix: prefix,
-		server: s,
+		server:     s,
 		engineLock: &sync.RWMutex{},
 	}
 }
@@ -158,7 +159,7 @@ func (s *Server) HandleFilter(pathPrefix string, h func(*HttpCtx)) error {
 	var matchAll bool
 	if strings.HasSuffix(pathPrefix, "*") {
 		matchAll = true
-		pathPrefix = EnsureSuffix(strings.TrimRight(pathPrefix ,"*"), "/")
+		pathPrefix = EnsureSuffix(strings.TrimRight(pathPrefix, "*"), "/")
 	} else {
 		matchAll = false
 	}
@@ -167,21 +168,21 @@ func (s *Server) HandleFilter(pathPrefix string, h func(*HttpCtx)) error {
 }
 
 // ExtendView extend the view engine with func f
-func (s *Server)ExtendView(name string, f interface{}) {
+func (s *Server) ExtendView(name string, f interface{}) {
 	s.assertUnlocked()
 	s.initViewEngine()
 	s.viewEngine.ExtendView(name, f)
 }
 
 // Run run the application as http
-func (s *Server)Run() {
+func (s *Server) Run() {
 	s.onInit()
 	err := http.ListenAndServe(s.addr, s)
 	assert.PanicErr(err)
 }
 
 // RunTLS run the application as https
-func (s *Server)RunTLS(certFile, keyFile string) {
+func (s *Server) RunTLS(certFile, keyFile string) {
 	s.onInit()
 	err := http.ListenAndServeTLS(s.addr, certFile, keyFile, s)
 	assert.PanicErr(err)

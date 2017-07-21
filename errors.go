@@ -1,10 +1,10 @@
 package mego
 
 import (
-	"net/http"
-	"strings"
 	"bytes"
+	"net/http"
 	"runtime/debug"
+	"strings"
 )
 
 // ErrHandler define the internal s error handler func
@@ -31,7 +31,7 @@ func handle403(w http.ResponseWriter, r *http.Request) {
 }
 
 // handle400 the default error 400 handler
-func handle400 (w http.ResponseWriter, r *http.Request) {
+func handle400(w http.ResponseWriter, r *http.Request) {
 	buf := bytes.NewBuffer(nil)
 	buf.WriteString("<h3>Error 400: Bad Request</h3>")
 	buf.WriteString("<p>The request sent by the client was syntactically incorrect: <i>" + r.URL.String() + "</i></p>")

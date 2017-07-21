@@ -3,15 +3,15 @@ package mego
 import (
 	"encoding/json"
 	"encoding/xml"
+	"errors"
+	"github.com/simbory/mego/assert"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"strings"
-	"errors"
 	"sync"
 	"sync/atomic"
-	"path"
-	"os"
-	"github.com/simbory/mego/assert"
 )
 
 type routeSetting struct {
@@ -21,7 +21,7 @@ type routeSetting struct {
 	area       *Area
 }
 
-type endCtxSignal struct {}
+type endCtxSignal struct{}
 
 type Server struct {
 	webRoot       string
@@ -53,19 +53,19 @@ type Server struct {
 func NewServer(webRoot, addr string, urlSuffix string) *Server {
 	webRoot = path.Clean(strings.Replace(webRoot, "\\", "/", -1))
 	var s = &Server{
-		webRoot: webRoot,
-		contentRoot: webRoot + "/www",
-		addr: addr,
-		locked: false,
-		routing: newRouteTree(),
-		initEvents: []func(){},
+		webRoot:       webRoot,
+		contentRoot:   webRoot + "/www",
+		addr:          addr,
+		locked:        false,
+		routing:       newRouteTree(),
+		initEvents:    []func(){},
 		err404Handler: handle404,
 		err500Handler: handle500,
 		err400Handler: handle400,
 		err403Handler: handle403,
-		filters: make(filterContainer),
-		engineLock: &sync.RWMutex{},
-		urlSuffix: urlSuffix,
+		filters:       make(filterContainer),
+		engineLock:    &sync.RWMutex{},
+		urlSuffix:     urlSuffix,
 	}
 	return s
 }
@@ -77,22 +77,21 @@ func (s *Server) assertUnlocked() {
 	}
 }
 
-
 func (s *Server) addRoute(m, p string, h ReqHandler) {
 	s.routeSettings = append(s.routeSettings, &routeSetting{
-		method: m,
-		routePath: p,
+		method:     m,
+		routePath:  p,
 		reqHandler: h,
-		area: nil,
+		area:       nil,
 	})
 }
 
 func (s *Server) addAreaRoute(m, p string, area *Area, h ReqHandler) {
 	s.routeSettings = append(s.routeSettings, &routeSetting{
-		method: m,
-		routePath: p,
+		method:     m,
+		routePath:  p,
 		reqHandler: h,
-		area: area,
+		area:       area,
 	})
 }
 
@@ -111,7 +110,7 @@ func (s *Server) onInit() {
 
 func (s *Server) processStaticRequest(w http.ResponseWriter, r *http.Request) {
 	filePath := s.MapContentPath(r.URL.Path)
-	stat,err := os.Stat(filePath)
+	stat, err := os.Stat(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			s.err404Handler(w, r)
@@ -228,7 +227,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if rec == nil {
 			return
 		}
-		if _,ok := rec.(*endCtxSignal); ok {
+		if _, ok := rec.(*endCtxSignal); ok {
 			return
 		}
 		s.err500Handler(w, r, rec)
@@ -254,9 +253,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	isDynamic := s.isDynamic(urlPath, urlCleanPath)
 	if isDynamic {
 		if urlCleanPath != "/" && len(s.urlSuffix) > 0 {
-			urlCleanPath = urlCleanPath[0:len(urlCleanPath)-len(s.urlSuffix)]
+			urlCleanPath = urlCleanPath[0 : len(urlCleanPath)-len(s.urlSuffix)]
 		}
-		var result= s.processDynamicRequest(w, r, urlCleanPath)
+		var result = s.processDynamicRequest(w, r, urlCleanPath)
 		if result != nil {
 			s.flush(w, r, result)
 		} else {

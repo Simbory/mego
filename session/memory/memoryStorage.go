@@ -1,16 +1,16 @@
 package memory
 
 import (
-	"time"
-	"sync"
 	"net/http"
+	"sync"
+	"time"
 )
 
 // storage memory session store.
 // it saved sessions in a map in memory.
 type storage struct {
-	sid          string                      //session id
-	timeAccessed time.Time                   //last access Time
+	sid          string                 //session id
+	timeAccessed time.Time              //last access Time
 	value        map[string]interface{} //session store
 	lock         sync.RWMutex
 }
@@ -57,4 +57,3 @@ func (st *storage) ID() string {
 // Release Implement method, no used.
 func (st *storage) Release(w http.ResponseWriter) {
 }
-

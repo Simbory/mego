@@ -38,8 +38,8 @@ func CreateManager(config *Config, provider Provider) *Manager {
 	config.EnableSetCookie = true
 
 	m := &Manager{
-		provider: provider,
-		config:   config,
+		provider:  provider,
+		config:    config,
 		managerID: newGuidStr(),
 	}
 	return m

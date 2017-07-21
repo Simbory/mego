@@ -35,7 +35,7 @@ func (fc filterContainer) exec(urlPath string, ctx *HttpCtx) {
 func (fc filterContainer) add(pathPrefix string, matchAll bool, f func(*HttpCtx)) {
 	key := filterKey{
 		pathPrefix: pathPrefix,
-		matchAll: matchAll,
+		matchAll:   matchAll,
 	}
 	fc[key] = f
 }

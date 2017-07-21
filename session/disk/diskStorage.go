@@ -1,27 +1,27 @@
 package disk
 
 import (
-	"time"
-	"sync"
+	"bytes"
+	"encoding/gob"
+	"io/ioutil"
 	"net/http"
 	"os"
-	"bytes"
-	"io/ioutil"
-	"encoding/gob"
+	"sync"
+	"time"
 )
 
 // storage disk session store.
 // it saved sessions in a map in disk.
 type storage struct {
-	sid          string                      //session id
-	timeAccessed time.Time                   //last access Time
+	sid          string                 //session id
+	timeAccessed time.Time              //last access Time
 	value        map[string]interface{} //session store
 	diskDir      string
 	lock         sync.RWMutex
 }
 
 type storage_value struct {
-	Time  time.Time `json:"time"`
+	Time  time.Time              `json:"time"`
 	Value map[string]interface{} `json:"value"`
 }
 
@@ -91,7 +91,7 @@ func (st *storage) Release(w http.ResponseWriter) {
 }
 
 func (st *storage) delFile() {
-	stat,err := os.Stat(st.diskFile())
+	stat, err := os.Stat(st.diskFile())
 	if err != nil {
 		return
 	}
@@ -104,8 +104,8 @@ func (st *storage) delFile() {
 	}
 }
 
-func (st *storage) writeLog(log string, err error)  {
-	f,err := os.OpenFile(st.diskDir + "/session.log", os.O_RDWR|os.O_CREATE|os.O_APPEND,0644)
+func (st *storage) writeLog(log string, err error) {
+	f, err := os.OpenFile(st.diskDir+"/session.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return
 	}
@@ -115,12 +115,12 @@ func (st *storage) writeLog(log string, err error)  {
 	buf.WriteString(now)
 	buf.WriteString(": " + log + "\r\n")
 	if err != nil {
-		for i := 0;i<len(now) + 2; i++ {
+		for i := 0; i < len(now)+2; i++ {
 			buf.WriteByte(' ')
 		}
 		buf.WriteString("error - " + err.Error() + "\r\n")
 	}
-	for i := 0;i<len(now) + 2; i++ {
+	for i := 0; i < len(now)+2; i++ {
 		buf.WriteByte(' ')
 	}
 	buf.WriteString("session - " + st.sid + "\r\n")
@@ -148,9 +148,9 @@ func (st *storage) saveValue() {
 }
 
 func (st *storage) readValue() *storage_value {
-	stat,err := os.Stat(st.diskFile())
+	stat, err := os.Stat(st.diskFile())
 	if err != nil {
-		if os.IsNotExist(err){
+		if os.IsNotExist(err) {
 			return nil
 		}
 		go st.writeLog("failed to read the session", err)
@@ -160,7 +160,7 @@ func (st *storage) readValue() *storage_value {
 		return nil
 	}
 
-	f,err := os.OpenFile(st.diskFile(), os.O_RDONLY,0644)
+	f, err := os.OpenFile(st.diskFile(), os.O_RDONLY, 0644)
 	if err != nil {
 		go st.writeLog("failed to read the session file", err)
 		return nil

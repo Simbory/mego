@@ -1,9 +1,9 @@
 package mego
 
 import (
-	"net/http"
-	"github.com/simbory/mego/views"
 	"github.com/simbory/mego/assert"
+	"github.com/simbory/mego/views"
+	"net/http"
 )
 
 // viewResult the view result struct

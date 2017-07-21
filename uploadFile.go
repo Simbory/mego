@@ -1,9 +1,9 @@
 package mego
 
 import (
+	"io"
 	"mime/multipart"
 	"os"
-	"io"
 )
 
 // UploadFile the uploaded file struct
@@ -11,8 +11,8 @@ type UploadFile struct {
 	FileName string
 	Size     int64
 	Error    error
-	File   multipart.File
-	Header *multipart.FileHeader
+	File     multipart.File
+	Header   *multipart.FileHeader
 }
 
 // Save save the posted file data as a file.
@@ -20,11 +20,11 @@ func (file *UploadFile) Save(path string) error {
 	if file.Error != nil {
 		return file.Error
 	}
-	f,err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL|os.O_TRUNC, 0666)
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_EXCL|os.O_TRUNC, 0666)
 	if err == nil {
 		defer f.Close()
 		if file.File != nil {
-			_,err := io.Copy(f, file.File)
+			_, err := io.Copy(f, file.File)
 			return err
 		}
 	}

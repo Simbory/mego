@@ -1,14 +1,14 @@
 package session
 
 import (
+	"encoding/gob"
+	"github.com/google/uuid"
+	"github.com/simbory/mego"
+	"github.com/simbory/mego/assert"
 	"net/http"
 	"net/url"
-	"time"
-	"github.com/simbory/mego"
-	"github.com/google/uuid"
-	"encoding/gob"
-	"github.com/simbory/mego/assert"
 	"sync"
+	"time"
 )
 
 type Config struct {
@@ -160,12 +160,12 @@ func (manager *Manager) RegenerateID(ctx *mego.HttpCtx) (session Storage) {
 		//delete old cookie
 		session = manager.provider.Read(sid)
 		cookie = &http.Cookie{
-			Name: manager.config.CookieName,
-			Value:                  url.QueryEscape(sid),
-			Path:                   manager.config.CookiePath,
-			HttpOnly:               manager.config.HTTPOnly,
-			Secure:                 manager.isSecure(r),
-			Domain:                 manager.config.Domain,
+			Name:     manager.config.CookieName,
+			Value:    url.QueryEscape(sid),
+			Path:     manager.config.CookiePath,
+			HttpOnly: manager.config.HTTPOnly,
+			Secure:   manager.isSecure(r),
+			Domain:   manager.config.Domain,
 		}
 	} else {
 		oldSessionId, _ := url.QueryUnescape(cookie.Value)
@@ -195,7 +195,7 @@ func RegisterTypeName(name string, value interface{}) {
 }
 
 func newGuidStr() string {
-	id,err := uuid.NewUUID()
+	id, err := uuid.NewUUID()
 	assert.PanicErr(err)
 	return id.String()
 }

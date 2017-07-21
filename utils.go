@@ -1,12 +1,12 @@
 package mego
 
 import (
+	"log"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"unsafe"
-	"path/filepath"
-	"os"
-	"log"
-	"path"
 )
 
 const Version = "1.0"
