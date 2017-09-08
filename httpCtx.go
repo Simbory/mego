@@ -7,8 +7,7 @@ import (
 	"github.com/simbory/mego/assert"
 	"net/http"
 	"regexp"
-	"strconv"
-	"strings"
+	"net/url"
 )
 
 type sizer interface {
@@ -17,14 +16,15 @@ type sizer interface {
 
 // HttpCtx the mego http context struct
 type HttpCtx struct {
-	req       *http.Request
-	res       http.ResponseWriter
-	routeData map[string]string
-	ended     bool
-	ctxItems  map[string]interface{}
-	server    *Server
-	area      *Area
-	ctxId     uint64
+	req         *http.Request
+	res         http.ResponseWriter
+	routeData   map[string]string
+	ended       bool
+	ctxItems    map[string]interface{}
+	server      *Server
+	area        *Area
+	ctxId       uint64
+	queryValues *url.Values
 }
 
 // CtxId get the http context id
@@ -42,65 +42,25 @@ func (ctx *HttpCtx) Response() http.ResponseWriter {
 	return ctx.res
 }
 
+// QueryStr get the value from the url query string
+func (ctx *HttpCtx) QueryStr(key string) string {
+	if ctx.queryValues == nil {
+		ctx.queryValues = &(ctx.req.URL.Query())
+	}
+	return ctx.queryValues.Get(key)
+}
+
+// FormValue get the form value from request. It's the same as ctx.Request().FormValue(key)
+func (ctx *HttpCtx) FormValue(key string) string {
+	return ctx.req.FormValue(key)
+}
+
 // RouteString get the route parameter value as string by key
-func (ctx *HttpCtx) RouteString(key string) string {
+func (ctx *HttpCtx) RouteVar(key string) string {
 	if ctx.routeData == nil {
 		return ""
 	}
 	return ctx.routeData[key]
-}
-
-// RoutePathInfo get the route parameter "*pathInfo". the route url is like "/path/prefix/*pathInfo"
-func (ctx *HttpCtx) RoutePathInfo() string {
-	return ctx.RouteString("pathInfo")
-}
-
-// RouteInt get the route parameter value as int64 by key
-func (ctx *HttpCtx) RouteInt(key string) int64 {
-	var rawValue = ctx.RouteString(key)
-	if len(rawValue) == 0 {
-		return 0
-	}
-	value, err := strconv.ParseInt(rawValue, 0, 64)
-	if err != nil {
-		return 0
-	}
-	return value
-}
-
-// RouteUint get the route parameter value as uint64 by key
-func (ctx *HttpCtx) RouteUint(key string) uint64 {
-	var rawValue = ctx.RouteString(key)
-	if len(rawValue) == 0 {
-		return 0
-	}
-	value, err := strconv.ParseUint(rawValue, 0, 64)
-	if err != nil {
-		return 0
-	}
-	return value
-}
-
-// RouteFloat get the route parameter value as float by key
-func (ctx *HttpCtx) RouteFloat(key string) float64 {
-	var rawValue = ctx.RouteString(key)
-	if len(rawValue) == 0 {
-		return 0
-	}
-	value, err := strconv.ParseFloat(rawValue, 64)
-	if err != nil {
-		return 0
-	}
-	return value
-}
-
-// RouteBool get the route parameter value as boolean by key
-func (ctx *HttpCtx) RouteBool(key string) bool {
-	var rawValue = ctx.RouteString(key)
-	if len(rawValue) == 0 || strings.ToLower(rawValue) == "false" || rawValue == "0" {
-		return false
-	}
-	return true
 }
 
 // PostFile get the post file info
