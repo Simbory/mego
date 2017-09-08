@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"path"
 )
 
 type ViewEngine struct {
@@ -53,23 +54,33 @@ func (engine *ViewEngine) getView(name string) (*template.Template, error) {
 	if engine.viewMap == nil {
 		return nil, nil
 	}
-	cache := engine.viewMap[name]
-	if cache == nil {
+	if strings.HasPrefix(name, "/") {
+		name = strings.TrimLeft(name, "/")
+	}
+	cacheView := engine.viewMap[name]
+	if cacheView == nil {
 		return nil, nil
 	}
-	return cache.tpl, cache.err
+	return cacheView.tpl, cacheView.err
 }
 
 func (engine *ViewEngine) getDeep(file, parent string, t *template.Template) (*template.Template, [][]string, error) {
 	var fileAbsPath string
-	if strings.HasPrefix(file, "../") {
+
+	if strings.HasPrefix(file, "../") || strings.HasPrefix(file, "./") {
 		fileAbsPath = filepath.Join(engine.viewDir, filepath.Dir(parent), file)
+		fileAbsPath = strings.Replace(fileAbsPath, "\\", "/", -1)
+		if !strings.HasPrefix(fileAbsPath, engine.viewDir) {
+			return nil, nil, errors.New("invalid view file:" + file)
+		}
+	} else if strings.HasPrefix(file, "/") {
+		fileAbsPath = engine.viewDir + strings.TrimLeft(file, "/")
 	} else {
 		fileAbsPath = filepath.Join(engine.viewDir, file)
 	}
 	stat, err := os.Stat(fileAbsPath)
 	if err != nil || stat.IsDir() {
-		return nil, [][]string{}, fmt.Errorf("The partial view '%s' in '%s' cannot be found", file, parent)
+		return nil, [][]string{}, fmt.Errorf("the partial view '%s' in '%s' cannot be found", file, parent)
 	}
 	data, err := ioutil.ReadFile(fileAbsPath)
 	if err != nil {
@@ -154,7 +165,7 @@ func (engine *ViewEngine) compile() error {
 		if os.IsNotExist(err) {
 			return err
 		}
-		return fmt.Errorf("Failed to open view directory '%s'.", engine.viewDir)
+		return fmt.Errorf("failed to open view directory '%s'", engine.viewDir)
 	}
 	vf := &file{
 		root:    engine.viewDir,
@@ -194,7 +205,7 @@ func (engine *ViewEngine) Clear() {
 
 func (engine *ViewEngine) Render(writer io.Writer, viewPath string, viewData interface{}) error {
 	if len(viewPath) < 1 {
-		return errors.New("The parameter 'viewPath' cannot be empty")
+		return errors.New("the parameter 'viewPath' cannot be empty")
 	}
 	if !strings.HasSuffix(viewPath, engine.viewExt) {
 		viewPath = viewPath + engine.viewExt
@@ -210,7 +221,7 @@ func (engine *ViewEngine) Render(writer io.Writer, viewPath string, viewData int
 		return err
 	}
 	if tpl == nil {
-		return fmt.Errorf("The view file '%s' cannot be found", viewPath)
+		return fmt.Errorf("the view file '%s' cannot be found", viewPath)
 	}
 	err = tpl.Execute(writer, viewData)
 	if err != nil {
@@ -221,7 +232,7 @@ func (engine *ViewEngine) Render(writer io.Writer, viewPath string, viewData int
 
 func NewEngine(rootDir, ext string) (*ViewEngine, error) {
 	if len(ext) == 0 {
-		ext = ".html"
+		ext = ".gohtml"
 	}
 	if !strings.HasPrefix(ext, ".") {
 		ext = "." + ext
@@ -230,6 +241,7 @@ func NewEngine(rootDir, ext string) (*ViewEngine, error) {
 	if err != nil {
 		return nil, err
 	}
+	rootDir = strings.Replace(path.Clean(rootDir), "\\", "/", -1) + "/"
 	engine := &ViewEngine{
 		viewDir: rootDir,
 		viewExt: strings.ToLower(ext),
@@ -240,7 +252,7 @@ func NewEngine(rootDir, ext string) (*ViewEngine, error) {
 		return nil, err
 	}
 	if !stat.IsDir() {
-		return nil, fmt.Errorf("Failed to open the view directory '%s'.", engine.viewDir)
+		return nil, fmt.Errorf("failed to open the view directory '%s'", engine.viewDir)
 	}
 	engine.watcher.AddHandler(&compileHandler{engine})
 	engine.watcher.Start()

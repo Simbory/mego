@@ -66,7 +66,7 @@ func handleCache(ctx *mego.HttpCtx) interface{} {
 }
 
 func main() {
-	server := mego.NewServer(mego.WorkingDir(), ":8080", ".html")
+	server := mego.NewServer(mego.WorkingDir(), ":8080", ".gohtml")
 	server.Get("/", handleHome)
 	server.Get("/test-session", handleSession)
 	server.Get("/test-cache", handleCache)
