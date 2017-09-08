@@ -25,56 +25,44 @@ func (a *Area) Dir() string {
 	return a.server.MapRootPath(a.pathPrefix)
 }
 
-// Get used to register router for GET method
-func (a *Area) Get(routePath string, handler ReqHandler) {
+// RouteGet used to register router for GET method
+func (a *Area) RouteGet(routePath string, handler ReqHandler) {
 	a.server.assertUnlocked()
 	a.server.addAreaRoute("GET", a.fixPath(routePath), a, handler)
 }
 
-// Post used to register router for POST method
-func (a *Area) Post(routePath string, handler ReqHandler) {
+// RoutePost used to register router for POST method
+func (a *Area) RoutePost(routePath string, handler ReqHandler) {
 	a.server.assertUnlocked()
 	a.server.addAreaRoute("POST", a.fixPath(routePath), a, handler)
 }
 
-// Put used to register router for PUT method
-func (a *Area) Put(routePath string, handler ReqHandler) {
+// RoutePut used to register router for PUT method
+func (a *Area) RoutePut(routePath string, handler ReqHandler) {
 	a.server.assertUnlocked()
 	a.server.addAreaRoute("PUT", a.fixPath(routePath), a, handler)
 }
 
-// Options used to register router for OPTIONS method
-func (a *Area) Options(routePath string, handler ReqHandler) {
+// RouteOptions used to register router for OPTIONS method
+func (a *Area) RouteOptions(routePath string, handler ReqHandler) {
 	a.server.assertUnlocked()
 	a.server.addAreaRoute("OPTIONS", a.fixPath(routePath), a, handler)
 }
 
-// Head used to register router for HEAD method
-func (a *Area) Head(routePath string, handler ReqHandler) {
-	a.server.assertUnlocked()
-	a.server.addAreaRoute("HEAD", a.fixPath(routePath), a, handler)
-}
-
-// Delete used to register router for DELETE method
-func (a *Area) Delete(routePath string, handler ReqHandler) {
+// RouteDel used to register router for DELETE method
+func (a *Area) RouteDel(routePath string, handler ReqHandler) {
 	a.server.assertUnlocked()
 	a.server.addAreaRoute("DELETE", a.fixPath(routePath), a, handler)
 }
 
-// Trace used to register router for TRACE method
-func (a *Area) Trace(routePath string, handler ReqHandler) {
+// RouteTrace used to register router for TRACE method
+func (a *Area) RouteTrace(routePath string, handler ReqHandler) {
 	a.server.assertUnlocked()
 	a.server.addAreaRoute("TRACE", a.fixPath(routePath), a, handler)
 }
 
-// Connect used to register router for CONNECT method
-func (a *Area) Connect(routePath string, handler ReqHandler) {
-	a.server.assertUnlocked()
-	a.server.addAreaRoute("CONNECT", a.fixPath(routePath), a, handler)
-}
-
-// Any used to register router for all methods
-func (a *Area) Any(routePath string, handler ReqHandler) {
+// Route used to register router for all methods
+func (a *Area) Route(routePath string, handler interface{}) {
 	a.server.assertUnlocked()
 	a.server.addAreaRoute("*", a.fixPath(routePath), a, handler)
 }

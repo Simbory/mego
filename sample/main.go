@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	server := mego.NewServer(mego.WorkingDir(), ":8080", "")
+	server := mego.NewServer(mego.WorkingDir(), ":8080")
 
 	cache.UseDefault()
 	provider := disk.NewProvider(server.MapRootPath("/temp/sessions"))

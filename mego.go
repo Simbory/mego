@@ -28,56 +28,44 @@ func (s *Server) AddRouteFunc(name string, fun RouteFunc) {
 	s.routing.addFunc(name, fun)
 }
 
-// Get used to register router for GET method
-func (s *Server) Get(routePath string, handler ReqHandler) {
+// RouteGet used to register router for GET method
+func (s *Server) RouteGet(routePath string, handler ReqHandler) {
 	s.assertUnlocked()
 	s.addRoute("GET", routePath, handler)
 }
 
-// Post used to register router for POST method
-func (s *Server) Post(routePath string, handler ReqHandler) {
+// RoutePost used to register router for POST method
+func (s *Server) RoutePost(routePath string, handler ReqHandler) {
 	s.assertUnlocked()
 	s.addRoute("POST", routePath, handler)
 }
 
-// Put used to register router for PUT method
-func (s *Server) Put(routePath string, handler ReqHandler) {
+// RoutePut used to register router for PUT method
+func (s *Server) RoutePut(routePath string, handler ReqHandler) {
 	s.assertUnlocked()
 	s.addRoute("PUT", routePath, handler)
 }
 
-// Options used to register router for OPTIONS method
-func (s *Server) Options(routePath string, handler ReqHandler) {
+// RouteOptions used to register router for OPTIONS method
+func (s *Server) RouteOptions(routePath string, handler ReqHandler) {
 	s.assertUnlocked()
 	s.addRoute("OPTIONS", routePath, handler)
 }
 
-// Head used to register router for HEAD method
-func (s *Server) Head(routePath string, handler ReqHandler) {
-	s.assertUnlocked()
-	s.addRoute("HEAD", routePath, handler)
-}
-
-// Delete used to register router for DELETE method
-func (s *Server) Delete(routePath string, handler ReqHandler) {
+// RouteDel used to register router for DELETE method
+func (s *Server) RouteDel(routePath string, handler ReqHandler) {
 	s.assertUnlocked()
 	s.addRoute("DELETE", routePath, handler)
 }
 
-// Trace used to register router for TRACE method
-func (s *Server) Trace(routePath string, handler ReqHandler) {
+// RouteTrace used to register router for TRACE method
+func (s *Server) RouteTrace(routePath string, handler ReqHandler) {
 	s.assertUnlocked()
 	s.addRoute("TRACE", routePath, handler)
 }
 
-// Connect used to register router for CONNECT method
-func (s *Server) Connect(routePath string, handler ReqHandler) {
-	s.assertUnlocked()
-	s.addRoute("CONNECT", routePath, handler)
-}
-
-// Any used to register router for all methods
-func (s *Server) Any(routePath string, handler ReqHandler) {
+// Route used to register router for all methods
+func (s *Server) Route(routePath string, handler interface{}) {
 	s.assertUnlocked()
 	s.addRoute("*", routePath, handler)
 }

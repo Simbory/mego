@@ -12,13 +12,14 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"path/filepath"
 )
 
 type routeSetting struct {
-	method     string
-	routePath  string
-	reqHandler ReqHandler
-	area       *Area
+	method    string
+	routePath string
+	processor interface{}
+	area      *Area
 }
 
 type endCtxSignal struct{}
@@ -38,7 +39,6 @@ type Server struct {
 	routeSettings []*routeSetting
 	viewEngine    *ViewEngine
 	engineLock    *sync.RWMutex
-	urlSuffix     string
 	ctxId         uint64
 }
 
@@ -50,7 +50,7 @@ type Server struct {
 //
 // urlSuffix: the dynamic url suffix. if this value is empty, all the dynamic url
 // should be like 'https://example.com/path/to/url' or 'https://example.com/path/to/url/'
-func NewServer(webRoot, addr string, urlSuffix string) *Server {
+func NewServer(webRoot, addr string) *Server {
 	webRoot = path.Clean(strings.Replace(webRoot, "\\", "/", -1))
 	var s = &Server{
 		webRoot:       webRoot,
@@ -65,7 +65,6 @@ func NewServer(webRoot, addr string, urlSuffix string) *Server {
 		err403Handler: handle403,
 		filters:       make(filterContainer),
 		engineLock:    &sync.RWMutex{},
-		urlSuffix:     urlSuffix,
 	}
 	return s
 }
@@ -73,25 +72,25 @@ func NewServer(webRoot, addr string, urlSuffix string) *Server {
 // assertUnlocked assert that the server is not running
 func (s *Server) assertUnlocked() {
 	if s.locked {
-		panic(errors.New("The s is locked."))
+		panic(errors.New("the server is locked"))
 	}
 }
 
-func (s *Server) addRoute(m, p string, h ReqHandler) {
+func (s *Server) addRoute(method, path string, handler interface{}) {
 	s.routeSettings = append(s.routeSettings, &routeSetting{
-		method:     m,
-		routePath:  p,
-		reqHandler: h,
-		area:       nil,
+		method:    method,
+		routePath: path,
+		processor: handler,
+		area:      nil,
 	})
 }
 
-func (s *Server) addAreaRoute(m, p string, area *Area, h ReqHandler) {
+func (s *Server) addAreaRoute(m, p string, area *Area, h interface{}) {
 	s.routeSettings = append(s.routeSettings, &routeSetting{
-		method:     m,
-		routePath:  p,
-		reqHandler: h,
-		area:       area,
+		method:    m,
+		routePath: p,
+		processor: h,
+		area:      area,
 	})
 }
 
@@ -103,7 +102,7 @@ func (s *Server) onInit() {
 	}
 	if len(s.routeSettings) > 0 {
 		for _, setting := range s.routeSettings {
-			s.routing.addRoute(setting.method, setting.routePath, setting.area, setting.reqHandler)
+			s.routing.addRoute(setting.method, setting.routePath, setting.area, setting.processor)
 		}
 	}
 }
@@ -119,26 +118,93 @@ func (s *Server) processStaticRequest(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if stat.IsDir() {
-		filePath += "/index.html"
+	if !stat.IsDir() {
+		http.ServeFile(w, r, filePath)
+	} else {
+		s.err404Handler(w, r)
 	}
-	http.ServeFile(w, r, filePath)
+}
+
+func findHandler(handler interface{}, method string) (ReqHandler, bool) {
+	switch method {
+	case "GET":
+		h, ok := handler.(RouteGetter)
+		if ok {
+			return h.Get, ok
+		}
+	case "POST":
+		h, ok := handler.(RoutePoster)
+		if ok {
+			return h.Post, true
+		}
+	case "PUT":
+		h, ok := handler.(RoutePutter)
+		if ok {
+			return h.Put, true
+		}
+	case "OPTIONS":
+		h, ok := handler.(RouteOptioner)
+		if ok {
+			return h.Options, true
+		}
+	case "DELETE":
+		h, ok := handler.(RouteDeleter)
+		if ok {
+			return h.Delete, true
+		}
+	case "TRACE":
+		h, ok := handler.(RouteTracer)
+		if ok {
+			return h.Trace, ok
+		}
+	default:
+		h, ok := handler.(RouteProcessor)
+		if ok {
+			return h.ProcessRequest, true
+		}
+	}
+	return nil, false
 }
 
 func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, urlPath string) interface{} {
 	method := strings.ToUpper(r.Method)
-
 	handlers, routeData, area, err := s.routing.lookup(urlPath)
 	assert.PanicErr(err)
-	var handler ReqHandler
-	var ok bool
+
+	var processor ReqHandler
+
 	if handlers != nil {
-		handler, ok = handlers[method]
-		if !ok {
-			handler, ok = handlers["*"]
+		handler, ok := handlers[method]
+		if ok {
+			if handler == nil {
+				return nil
+			}
+			p, ok := handler.(ReqHandler)
+			if ok {
+				processor = p
+			} else {
+				return nil
+			}
+		} else {
+			handler, ok := handlers["*"]
+			if !ok || handler == nil {
+				return nil
+			}
+			switch handler.(type) {
+			case ReqHandler:
+				processor = handler.(ReqHandler)
+			default:
+				p, ok := findHandler(handler, method)
+				if ok {
+					processor = p
+				} else {
+					return nil
+				}
+			}
 		}
 	}
-	if handler != nil && ok {
+
+	if processor != nil {
 		ctxId := atomic.AddUint64(&(s.ctxId), 1)
 		var ctx = &HttpCtx{
 			req:       r,
@@ -152,7 +218,7 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 		if ctx.ended {
 			return &emptyResult{}
 		}
-		return handler(ctx)
+		return processor(ctx)
 	}
 	return nil
 }
@@ -206,18 +272,9 @@ func (s *Server) initViewEngine() {
 	}
 }
 
-func (s *Server) isDynamic(urlPath, cleanUrlPath string) bool {
-	if len(urlPath) == 0 || urlPath == "/" {
-		return true
-	}
-	if len(s.urlSuffix) > 0 {
-		return strings.HasSuffix(urlPath, s.urlSuffix)
-	}
-	index1 := strings.LastIndex(urlPath, ".")
-	if index1 < 0 {
-		return true
-	}
-	return index1 < strings.LastIndex(cleanUrlPath, "/")
+func (s *Server) isDynamic(cleanUrlPath string) bool {
+	ext := filepath.Ext(cleanUrlPath)
+	return len(ext) == 0
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -236,26 +293,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			handle500(w, r, rec)
 		}
 	}()
-
-	var urlPath string
-	var urlCleanPath string
-	if r.URL.Path == "/" {
+	var urlPath = strings.TrimRight(r.URL.Path, "/")
+	if len(urlPath) == 0 {
 		urlPath = "/"
-		urlCleanPath = "/"
-	} else {
-		urlCleanPath = path.Clean(r.URL.Path)
-		if strings.HasSuffix(r.URL.Path, "/") {
-			urlPath = urlCleanPath + "/"
-		} else {
-			urlPath = urlCleanPath
-		}
 	}
-	isDynamic := s.isDynamic(urlPath, urlCleanPath)
+	isDynamic := s.isDynamic(urlPath)
 	if isDynamic {
-		if urlCleanPath != "/" && len(s.urlSuffix) > 0 {
-			urlCleanPath = urlCleanPath[0 : len(urlCleanPath)-len(s.urlSuffix)]
-		}
-		var result = s.processDynamicRequest(w, r, urlCleanPath)
+		var result = s.processDynamicRequest(w, r, urlPath)
 		if result != nil {
 			s.flush(w, r, result)
 		} else {

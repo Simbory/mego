@@ -77,7 +77,7 @@ type routeNode struct {
 	Path       string
 	PathSplits []string
 	Params     map[string]RouteOpt
-	handlers   map[string]ReqHandler
+	handlers   map[string]interface{}
 	Children   []*routeNode
 	area       *Area
 }
@@ -119,12 +119,12 @@ func (node *routeNode) addChild(childNode *routeNode) error {
 	}
 	if childNode.isLeaf() {
 		if existChild.handlers == nil {
-			existChild.handlers = make(map[string]ReqHandler)
+			existChild.handlers = make(map[string]interface{})
 		}
 		// merge handlers
 		for hMethod, hFunc := range childNode.handlers {
 			if _, ok := existChild.handlers[hMethod]; ok {
-				return fmt.Errorf("Duplicate handler for HttpMethod %s in route tree. Path: %s, Depth: %d",
+				return fmt.Errorf("duplicate handler for HttpMethod %s in route tree. Path: %s, Depth: %d",
 					hMethod,
 					existChild.Path,
 					existChild.CurDepth)
@@ -146,7 +146,7 @@ func (node *routeNode) isParamPath(path string) bool {
 	return strings.HasPrefix(path, paramBeginStr) && strings.HasSuffix(path, paramEndStr)
 }
 
-func newRouteNode(routePath, method string, area *Area, handler ReqHandler) (*routeNode, error) {
+func newRouteNode(routePath, method string, area *Area, handler interface{}) (*routeNode, error) {
 	err := checkRoutePath(routePath)
 	if err != nil {
 		return nil, err
@@ -187,8 +187,8 @@ func newRouteNode(routePath, method string, area *Area, handler ReqHandler) (*ro
 			current = current.Children[0]
 		}
 	}
-	current.handlers = map[string]ReqHandler{
-		strings.ToUpper(method): handler,
+	current.handlers = map[string]interface{}{
+		method: handler,
 	}
 	current.area = area
 	current = result
@@ -228,7 +228,7 @@ func (tree *routeTree) addFunc(name string, fun RouteFunc) {
 	tree.funcMap[name] = fun
 }
 
-func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlParts []string, endWithSlash bool) (found bool, handler map[string]ReqHandler, routeMap map[string]string, area *Area) {
+func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlParts []string, endWithSlash bool) (found bool, handler map[string]interface{}, routeMap map[string]string, area *Area) {
 	found = false
 	handler = nil
 	routeMap = nil
@@ -358,7 +358,7 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 	return
 }
 
-func (tree *routeTree) lookup(urlPath string) (map[string]ReqHandler, map[string]string, *Area, error) {
+func (tree *routeTree) lookup(urlPath string) (map[string]interface{}, map[string]string, *Area, error) {
 	if urlPath == "/" {
 		handler := tree.handlers
 		if handler == nil {
@@ -384,21 +384,47 @@ func (tree *routeTree) lookup(urlPath string) (map[string]ReqHandler, map[string
 	return nil, nil, nil, nil
 }
 
-func (tree *routeTree) addRoute(method, routePath string, area *Area, handler ReqHandler) {
+func (tree *routeTree) buildHandler(method string, processor interface{}) interface{} {
+	handler, ok := processor.(ReqHandler)
+	if ok {
+		res := &routeProcessor{}
+		switch method {
+		case "GET":
+			res.getFun = handler
+		case "POST":
+			res.postFun = handler
+		case "PUT":
+			res.putFun = handler
+		case "OPTIONS":
+			res.optFun = handler
+		case "DELETE":
+			res.delFun = handler
+		case "TRACE":
+			res.traFun = handler
+		default:
+			res.hdlFun = handler
+		}
+		return res
+	} else {
+		return processor
+	}
+}
+
+func (tree *routeTree) addRoute(method, routePath string, area *Area, processor interface{}) {
 	assert.NotEmpty("method", method)
 	assert.NotEmpty("routePath", routePath)
-	assert.NotNil("handler", handler)
+	assert.NotNil("handler", processor)
 	if routePath == "/" {
 		if tree.handlers == nil {
-			tree.handlers = map[string]ReqHandler{
-				strings.ToUpper(method): handler,
+			tree.handlers = map[string]interface{}{
+				method: processor,
 			}
 		} else {
-			tree.handlers[strings.ToUpper(method)] = handler
+			tree.handlers[method] = processor
 		}
 		return
 	}
-	branch, err := newRouteNode(routePath, method, area, handler)
+	branch, err := newRouteNode(routePath, method, area, processor)
 	assert.PanicErr(err)
 	err = tree.addChild(branch)
 	assert.PanicErr(err)
@@ -418,7 +444,7 @@ func newRouteTree() *routeTree {
 	node.CurDepth = 0
 	node.MaxDepth = 0
 	node.Path = "/"
-	node.handlers = map[string]ReqHandler{}
+	node.handlers = map[string]interface{}{}
 	node.MatchCase = runtime.GOOS != "windows"
 	return node
 }
@@ -433,7 +459,7 @@ func isNumber(c byte) bool {
 
 func splitURLPath(urlPath string) ([]string, error) {
 	if len(urlPath) == 0 {
-		return nil, errors.New("The URL path is empty")
+		return nil, errors.New("the URL path is empty")
 	}
 	p := strings.Trim(urlPath, "/")
 	splits := strings.Split(p, "/")
@@ -443,7 +469,7 @@ func splitURLPath(urlPath string) ([]string, error) {
 			continue
 		}
 		if s == ".." {
-			return nil, errors.New("Invalid URL path. The URL path cannot contains '..'")
+			return nil, errors.New("invalid URL path. The URL path cannot contains '..'")
 		}
 		result = append(result, s)
 	}
@@ -482,12 +508,12 @@ func checkRoutePath(path string) error {
 		if path[i] == paramEnd {
 			// check and ensure current route param is not empty
 			if len(paramChars) == 0 {
-				return fmt.Errorf("Invalid route parameter '<>' or the route parameter has no begining tag '<': %d", i)
+				return fmt.Errorf("invalid route parameter '<>' or the route parameter has no begining tag '<': %d", i)
 			}
 			var curParam = strings.Split(string(paramChars), ":")[0]
 			for _, tmp := range routeParams {
 				if tmp == curParam {
-					return fmt.Errorf("Duplicate route param '%s': %d", curParam, i)
+					return fmt.Errorf("duplicate route param '%s': %d", curParam, i)
 				}
 			}
 			routeParams = append(routeParams, curParam)
@@ -500,7 +526,7 @@ func checkRoutePath(path string) error {
 				if isA2Z(path[i]) {
 					paramChars = append(paramChars, path[i])
 				} else {
-					return fmt.Errorf("Invalid character '%c' at the beginin of the route param: %d", path[i], i)
+					return fmt.Errorf("invalid character '%c' at the beginin of the route param: %d", path[i], i)
 				}
 			} else {
 				paramChars = append(paramChars, path[i])
@@ -508,7 +534,7 @@ func checkRoutePath(path string) error {
 		}
 	}
 	if len(routeParams) > 255 {
-		return errors.New("Too many route params: the maximum number of the route param is 255")
+		return errors.New("too many route params: the maximum number of the route param is 255")
 	}
 	return nil
 }
