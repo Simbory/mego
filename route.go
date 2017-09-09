@@ -384,32 +384,6 @@ func (tree *routeTree) lookup(urlPath string) (map[string]interface{}, map[strin
 	return nil, nil, nil, nil
 }
 
-func (tree *routeTree) buildHandler(method string, processor interface{}) interface{} {
-	handler, ok := processor.(ReqHandler)
-	if ok {
-		res := &routeProcessor{}
-		switch method {
-		case "GET":
-			res.getFun = handler
-		case "POST":
-			res.postFun = handler
-		case "PUT":
-			res.putFun = handler
-		case "OPTIONS":
-			res.optFun = handler
-		case "DELETE":
-			res.delFun = handler
-		case "TRACE":
-			res.traFun = handler
-		default:
-			res.hdlFun = handler
-		}
-		return res
-	} else {
-		return processor
-	}
-}
-
 func (tree *routeTree) addRoute(method, routePath string, area *Area, processor interface{}) {
 	assert.NotEmpty("method", method)
 	assert.NotEmpty("routePath", routePath)

@@ -45,7 +45,8 @@ func (ctx *HttpCtx) Response() http.ResponseWriter {
 // QueryStr get the value from the url query string
 func (ctx *HttpCtx) QueryStr(key string) string {
 	if ctx.queryValues == nil {
-		ctx.queryValues = &(ctx.req.URL.Query())
+		query := ctx.req.URL.Query()
+		ctx.queryValues = &query
 	}
 	return ctx.queryValues.Get(key)
 }

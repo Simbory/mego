@@ -214,6 +214,9 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 			area:      area,
 			ctxId:     ctxId,
 		}
+		if area != nil {
+			area.fi
+		}
 		s.filters.exec(urlPath, ctx)
 		if ctx.ended {
 			return &emptyResult{}
