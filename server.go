@@ -130,62 +130,62 @@ func findHandler(handler interface{}, method string) (func(ctx *HttpCtx)interfac
 			return h.Trace, true
 		}
 	case "PATCH":
-		h,ok := handler.(RoutePatch)
+		h, ok := handler.(RoutePatch)
 		if ok {
 			return h.Patch, true
 		}
 	case "CONNECT":
-		h,ok := handler.(RouteConnect)
+		h, ok := handler.(RouteConnect)
 		if ok {
 			return h.Connect, true
 		}
 	case "HEAD":
-		h,ok := handler.(RouteHead)
+		h, ok := handler.(RouteHead)
 		if ok {
 			return h.Head, true
 		}
 	case "PROPFIND":
-		h,ok := handler.(RoutePropFind)
+		h, ok := handler.(RoutePropFind)
 		if ok {
 			return h.PropFind, true
 		}
 	case "PROPPATCH":
-		h,ok := handler.(RoutePropPatch)
+		h, ok := handler.(RoutePropPatch)
 		if ok {
 			return h.PropPatch, true
 		}
 	case "MKCOL":
-		h,ok := handler.(RouteMkcol)
+		h, ok := handler.(RouteMkcol)
 		if ok {
 			return h.Mkcol, true
 		}
 	case "COPY":
-		h,ok := handler.(RouteCopy)
+		h, ok := handler.(RouteCopy)
 		if ok {
 			return h.Copy, true
 		}
 	case "MOVE":
-		h,ok := handler.(RouteMove)
+		h, ok := handler.(RouteMove)
 		if ok {
 			return h.Move, true
 		}
 	case "LOCK":
-		h,ok := handler.(RouteLock)
+		h, ok := handler.(RouteLock)
 		if ok {
 			return h.Lock, true
 		}
 	case "UNLOCK":
-		h,ok := handler.(RouteUnlock)
+		h, ok := handler.(RouteUnlock)
 		if ok {
 			return h.Unlock, true
 		}
-	default:
-		h, ok := handler.(RouteProcessor)
-		if ok {
-			return h.ProcessRequest, true
-		}
 	}
-	return nil, false
+	h, ok := handler.(RouteProcessor)
+	if ok {
+		return h.ProcessRequest, true
+	} else {
+		return nil, false
+	}
 }
 
 func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, urlPath string) interface{} {
