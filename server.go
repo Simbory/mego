@@ -285,7 +285,7 @@ func (s *Server) initViewEngine() {
 		s.engineLock.Lock()
 		defer s.engineLock.Unlock()
 		if s.viewEngine == nil {
-			s.viewEngine = NewViewEngine(s.MapRootPath("views"), ".gohtml")
+			s.viewEngine = NewViewEngine(s.MapRootPath("views"))
 		}
 	}
 }

@@ -11,7 +11,6 @@ import (
 type ViewEngine struct {
 	engine   *views.ViewEngine
 	viewDir  string
-	viewExt  string
 	viewFunc template.FuncMap
 }
 
@@ -19,7 +18,7 @@ type ViewEngine struct {
 func (e *ViewEngine) Render(viewName string, data interface{}) Result {
 	if e.engine == nil {
 		func(e *ViewEngine) {
-			eg, err := views.NewEngine(e.viewDir, e.viewExt)
+			eg, err := views.NewEngine(e.viewDir, ".gohtml")
 			assert.PanicErr(err)
 			for name, f := range e.viewFunc {
 				eg.AddFunc(name, f)
@@ -45,14 +44,12 @@ func (e *ViewEngine) ExtendView(name string, viewFunc interface{}) {
 	e.viewFunc[name] = viewFunc
 }
 
-// NewViewEngine create a new view engine. the view files is in viewDir and the view file extension is 'viewExt'
-func NewViewEngine(viewDir, viewExt string) *ViewEngine {
+// NewViewEngine create a new view engine in ViewDir with file extension '.gohtml'
+func NewViewEngine(viewDir string) *ViewEngine {
 	assert.NotEmpty("viewDir", viewDir)
-	assert.NotEmpty("viewExt", viewExt)
 	return &ViewEngine{
 		engine:   nil,
 		viewDir:  viewDir,
-		viewExt:  viewExt,
 		viewFunc: make(template.FuncMap),
 	}
 }

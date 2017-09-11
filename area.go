@@ -55,7 +55,7 @@ func (a *Area) initViewEngine() {
 		a.engineLock.Lock()
 		defer a.engineLock.Unlock()
 		if a.viewEngine == nil {
-			a.viewEngine = NewViewEngine(a.server.MapRootPath(a.Key()+"/views"), ".gohtml")
+			a.viewEngine = NewViewEngine(a.server.MapRootPath(a.Key() + "/views"))
 		}
 	}
 }

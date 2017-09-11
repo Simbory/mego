@@ -60,7 +60,7 @@ func (fw *FileWatcher) RemoveWatch(path string) error {
 // AddHandler add file fswatcher handler
 func (fw *FileWatcher) AddHandler(handler Handler) error {
 	if handler == nil {
-		return errors.New("The parameter 'handler' cannot be nil")
+		return errors.New("the parameter 'handler' cannot be nil")
 	}
 	fw.handlers = append(fw.handlers, handler)
 	return nil

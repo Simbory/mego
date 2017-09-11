@@ -49,10 +49,10 @@ func (c *Manager) fileUsage(fPath string) int {
 // Add add cache data to memory
 func (c *Manager) Set(name string, data interface{}, dependencyFiles []string, expired time.Duration) error {
 	if len(name) == 0 {
-		return errors.New("The parameter 'name' cannot be empty")
+		return errors.New("the parameter 'name' cannot be empty")
 	}
 	if data == nil {
-		return errors.New("The parameter 'data' cannot be nil")
+		return errors.New("the parameter 'data' cannot be nil")
 	}
 	var dFiles []string
 	if len(dependencyFiles) != 0 {
@@ -62,7 +62,7 @@ func (c *Manager) Set(name string, data interface{}, dependencyFiles []string, e
 			}
 			fPath := path.Clean(strings.Replace(file, "\\", "/", -1))
 			if stat, err := os.Stat(fPath); err != nil || stat.IsDir() {
-				return fmt.Errorf("Invalid dependency file. The file cannot be found: \"%s\".", file)
+				return fmt.Errorf("invalid dependency file: not found file \"%s\"", file)
 			}
 			dFiles = append(dFiles, fPath)
 		}

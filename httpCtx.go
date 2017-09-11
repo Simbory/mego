@@ -143,7 +143,7 @@ func (ctx *HttpCtx) JsonResult(data interface{}) Result {
 func (ctx *HttpCtx) JsonpResult(data interface{}, callback string) Result {
 	reg := regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
 	if !reg.Match(str2Byte(callback)) {
-		panic(fmt.Errorf("Invalid JSONP callback name %s", callback))
+		panic(fmt.Errorf("invalid JSONP callback name '%s'", callback))
 	}
 	dataJSON, err := json.Marshal(data)
 	assert.PanicErr(err)

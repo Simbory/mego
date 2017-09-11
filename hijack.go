@@ -16,10 +16,11 @@ type hijackContainer map[hijackKey]func(*HttpCtx)
 // exec hijack the request
 func (fc hijackContainer) exec(urlPath string, ctx *HttpCtx) {
 	for key, f := range fc {
-		if key.match(urlPath) {
-			if f(ctx); ctx.ended {
-				break
-			}
+		if !key.match(urlPath) {
+			continue
+		}
+		if f(ctx); ctx.ended {
+			break
 		}
 	}
 }
