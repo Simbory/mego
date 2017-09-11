@@ -6,11 +6,11 @@ import (
 )
 
 func Init(server *mego.Server) {
-	server.Get("/", home)
-	server.Any("/views/*pathInfo", renderView)
-	server.Get("/date/<year:int>-<month:int>-<day:int>", getDate)
-	server.Get("/session", testSession)
-	server.Get("/uuid", testUUID)
-	server.Any("/filter/*pathInfo", testFilter)
+	server.Route("/", home)
+	server.Route("/views/*pathInfo", renderView)
+	server.Route("/date/<year:int>-<month:int>-<day:int>", getDate)
+	server.Route("/session", testSession)
+	server.Route("/uuid", testUUID)
+	server.Route("/filter/*pathInfo", testFilter)
 	session.RegisterType(&userModel{})
 }

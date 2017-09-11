@@ -31,9 +31,6 @@ var (
 	wordReg = regexp.MustCompile("^[\\w]+")
 )
 
-// ReqHandler the route handler function
-type ReqHandler func(ctx *HttpCtx) interface{}
-
 // RouteFunc define the route check function
 type RouteFunc func(urlPath string, opt RouteOpt) string
 
@@ -77,7 +74,7 @@ type routeNode struct {
 	Path       string
 	PathSplits []string
 	Params     map[string]RouteOpt
-	handlers   map[string]interface{}
+	processor  interface{}
 	Children   []*routeNode
 	area       *Area
 }
@@ -118,19 +115,12 @@ func (node *routeNode) addChild(childNode *routeNode) error {
 		existChild.MaxDepth = childNode.MaxDepth
 	}
 	if childNode.isLeaf() {
-		if existChild.handlers == nil {
-			existChild.handlers = make(map[string]interface{})
+		if existChild.processor != nil {
+			return fmt.Errorf("duplicate handler in route tree. Path: %s, Depth: %d",
+				existChild.Path,
+				existChild.CurDepth)
 		}
-		// merge handlers
-		for hMethod, hFunc := range childNode.handlers {
-			if _, ok := existChild.handlers[hMethod]; ok {
-				return fmt.Errorf("duplicate handler for HttpMethod %s in route tree. Path: %s, Depth: %d",
-					hMethod,
-					existChild.Path,
-					existChild.CurDepth)
-			}
-			existChild.handlers[hMethod] = hFunc
-		}
+		existChild.processor = childNode.processor
 	} else {
 		for _, child := range childNode.Children {
 			err := existChild.addChild(child)
@@ -146,7 +136,7 @@ func (node *routeNode) isParamPath(path string) bool {
 	return strings.HasPrefix(path, paramBeginStr) && strings.HasSuffix(path, paramEndStr)
 }
 
-func newRouteNode(routePath, method string, area *Area, handler interface{}) (*routeNode, error) {
+func newRouteNode(routePath string, area *Area, processor interface{}) (*routeNode, error) {
 	err := checkRoutePath(routePath)
 	if err != nil {
 		return nil, err
@@ -187,9 +177,7 @@ func newRouteNode(routePath, method string, area *Area, handler interface{}) (*r
 			current = current.Children[0]
 		}
 	}
-	current.handlers = map[string]interface{}{
-		method: handler,
-	}
+	current.processor = processor
 	current.area = area
 	current = result
 	for {
@@ -228,7 +216,7 @@ func (tree *routeTree) addFunc(name string, fun RouteFunc) {
 	tree.funcMap[name] = fun
 }
 
-func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlParts []string, endWithSlash bool) (found bool, handler map[string]interface{}, routeMap map[string]string, area *Area) {
+func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlParts []string, endWithSlash bool) (found bool, handler interface{}, routeMap map[string]string, area *Area) {
 	found = false
 	handler = nil
 	routeMap = nil
@@ -248,7 +236,7 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 		}
 		routeData["pathInfo"] = strings.TrimLeft(path, "/")
 		found = true
-		handler = indexNode.handlers
+		handler = indexNode.processor
 		routeMap = routeData
 		return
 	} else if indexNode.NodeType == static {
@@ -323,7 +311,7 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 		return
 	}
 	if indexNode.CurDepth == pathLength {
-		handler = indexNode.handlers
+		handler = indexNode.processor
 		routeMap = routeData
 		area = indexNode.area
 		// detect default value
@@ -358,13 +346,13 @@ func (tree *routeTree) lookupDepth(indexNode *routeNode, pathLength uint16, urlP
 	return
 }
 
-func (tree *routeTree) lookup(urlPath string) (map[string]interface{}, map[string]string, *Area, error) {
+func (tree *routeTree) lookup(urlPath string) (interface{}, map[string]string, *Area, error) {
 	if urlPath == "/" {
-		handler := tree.handlers
+		handler := tree.processor
 		if handler == nil {
 			return nil, nil, nil, nil
 		}
-		return tree.handlers, nil, tree.area, nil
+		return tree.processor, nil, tree.area, nil
 	}
 	urlParts, err := splitURLPath(urlPath)
 	if err != nil {
@@ -384,21 +372,18 @@ func (tree *routeTree) lookup(urlPath string) (map[string]interface{}, map[strin
 	return nil, nil, nil, nil
 }
 
-func (tree *routeTree) addRoute(method, routePath string, area *Area, processor interface{}) {
-	assert.NotEmpty("method", method)
+func (tree *routeTree) addRoute(routePath string, area *Area, processor interface{}) {
 	assert.NotEmpty("routePath", routePath)
 	assert.NotNil("handler", processor)
 	if routePath == "/" {
-		if tree.handlers == nil {
-			tree.handlers = map[string]interface{}{
-				method: processor,
-			}
+		if tree.processor == nil {
+			tree.processor = processor
 		} else {
-			tree.handlers[method] = processor
+			panic(errors.New("duplicate route processor for routePath '/'"))
 		}
 		return
 	}
-	branch, err := newRouteNode(routePath, method, area, processor)
+	branch, err := newRouteNode(routePath, area, processor)
 	assert.PanicErr(err)
 	err = tree.addChild(branch)
 	assert.PanicErr(err)
@@ -418,7 +403,6 @@ func newRouteTree() *routeTree {
 	node.CurDepth = 0
 	node.MaxDepth = 0
 	node.Path = "/"
-	node.handlers = map[string]interface{}{}
 	node.MatchCase = runtime.GOOS != "windows"
 	return node
 }

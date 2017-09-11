@@ -9,11 +9,15 @@ import (
 	"strings"
 )
 
-func getUpload(ctx *mego.HttpCtx) interface{} {
+type handleUpload struct {
+
+}
+
+func (upload *handleUpload) Get(ctx *mego.HttpCtx) interface{} {
 	return ctx.ViewResult("upload", nil)
 }
 
-func postUpload(ctx *mego.HttpCtx) interface{} {
+func (upload *handleUpload) Post(ctx *mego.HttpCtx) interface{} {
 	file := ctx.PostFile("file")
 	filePath := ctx.MapContentPath(file.FileName)
 	err := file.SaveAndClose(filePath)
@@ -21,11 +25,14 @@ func postUpload(ctx *mego.HttpCtx) interface{} {
 	return fmt.Sprintf("file Size: %d", file.Size)
 }
 
-func getLogin(ctx *mego.HttpCtx) interface{} {
+type handleLogin struct {
+}
+
+func (login *handleLogin) Get(ctx *mego.HttpCtx) interface{} {
 	return ctx.ViewResult("login", nil)
 }
 
-func postLogin(ctx *mego.HttpCtx) interface{} {
+func (login *handleLogin) Post(ctx *mego.HttpCtx) interface{} {
 	user := ctx.Request().FormValue("username")
 	pwd := ctx.Request().FormValue("pwd")
 	if user != "test" || pwd != "test" {
@@ -44,10 +51,8 @@ var sessionManager *session.Manager
 
 func Init(server *mego.Server) {
 	area = server.GetArea("admin")
-	area.Get("/shell/upload", getUpload)
-	area.Post("/shell/upload", postUpload)
-	area.Get("/login", getLogin)
-	area.Post("/login", postLogin)
+	area.Route("/shell/upload", &handleUpload{})
+	area.Route("/login", &handleLogin{})
 
 	provider := memory.NewProvider()
 	config := &session.Config{
@@ -56,7 +61,7 @@ func Init(server *mego.Server) {
 	}
 	sessionManager = session.CreateManager(config, provider)
 
-	area.HandleFilter("/shell/*", func(ctx *mego.HttpCtx) {
+	area.HijackRequest("/shell/", func(ctx *mego.HttpCtx) {
 		s := sessionManager.Start(ctx)
 		userData := s.Get("admin-user")
 		if userData == nil {

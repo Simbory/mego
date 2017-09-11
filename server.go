@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,7 +15,6 @@ import (
 )
 
 type routeSetting struct {
-	method    string
 	routePath string
 	processor interface{}
 	area      *Area
@@ -35,38 +33,11 @@ type Server struct {
 	err500Handler ErrHandler
 	err400Handler http.HandlerFunc
 	err403Handler http.HandlerFunc
-	filters       filterContainer
+	hijackColl    hijackContainer
 	routeSettings []*routeSetting
 	viewEngine    *ViewEngine
-	engineLock    *sync.RWMutex
+	engineLock    sync.RWMutex
 	ctxId         uint64
-}
-
-// NewServer create a new server
-//
-// webRoot: the root of this web server. and the content root is '${webRoot}/www'
-//
-// addr: the address the server is listen on
-//
-// urlSuffix: the dynamic url suffix. if this value is empty, all the dynamic url
-// should be like 'https://example.com/path/to/url' or 'https://example.com/path/to/url/'
-func NewServer(webRoot, addr string) *Server {
-	webRoot = path.Clean(strings.Replace(webRoot, "\\", "/", -1))
-	var s = &Server{
-		webRoot:       webRoot,
-		contentRoot:   webRoot + "/www",
-		addr:          addr,
-		locked:        false,
-		routing:       newRouteTree(),
-		initEvents:    []func(){},
-		err404Handler: handle404,
-		err500Handler: handle500,
-		err400Handler: handle400,
-		err403Handler: handle403,
-		filters:       make(filterContainer),
-		engineLock:    &sync.RWMutex{},
-	}
-	return s
 }
 
 // assertUnlocked assert that the server is not running
@@ -76,18 +47,19 @@ func (s *Server) assertUnlocked() {
 	}
 }
 
-func (s *Server) addRoute(method, path string, handler interface{}) {
+func (s *Server) addRoute(path string, handler interface{}) {
 	s.routeSettings = append(s.routeSettings, &routeSetting{
-		method:    method,
 		routePath: path,
 		processor: handler,
 		area:      nil,
 	})
 }
 
-func (s *Server) addAreaRoute(m, p string, area *Area, h interface{}) {
+func (s *Server) addAreaRoute(p string, area *Area, h interface{}) {
+	assert.NotNil("area", area)
+	assert.NotNil("h", h)
+	assert.NotEmpty("p", p)
 	s.routeSettings = append(s.routeSettings, &routeSetting{
-		method:    m,
 		routePath: p,
 		processor: h,
 		area:      area,
@@ -102,7 +74,7 @@ func (s *Server) onInit() {
 	}
 	if len(s.routeSettings) > 0 {
 		for _, setting := range s.routeSettings {
-			s.routing.addRoute(setting.method, setting.routePath, setting.area, setting.processor)
+			s.routing.addRoute(setting.routePath, setting.area, setting.processor)
 		}
 	}
 }
@@ -125,37 +97,87 @@ func (s *Server) processStaticRequest(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func findHandler(handler interface{}, method string) (ReqHandler, bool) {
+func findHandler(handler interface{}, method string) (func(ctx *HttpCtx)interface{}, bool) {
 	switch method {
 	case "GET":
-		h, ok := handler.(RouteGetter)
+		h, ok := handler.(RouteGet)
 		if ok {
 			return h.Get, ok
 		}
 	case "POST":
-		h, ok := handler.(RoutePoster)
+		h, ok := handler.(RoutePost)
 		if ok {
 			return h.Post, true
 		}
 	case "PUT":
-		h, ok := handler.(RoutePutter)
+		h, ok := handler.(RoutePut)
 		if ok {
 			return h.Put, true
 		}
 	case "OPTIONS":
-		h, ok := handler.(RouteOptioner)
+		h, ok := handler.(RouteOptions)
 		if ok {
 			return h.Options, true
 		}
 	case "DELETE":
-		h, ok := handler.(RouteDeleter)
+		h, ok := handler.(RouteDelete)
 		if ok {
 			return h.Delete, true
 		}
 	case "TRACE":
-		h, ok := handler.(RouteTracer)
+		h, ok := handler.(RouteTrace)
 		if ok {
-			return h.Trace, ok
+			return h.Trace, true
+		}
+	case "PATCH":
+		h,ok := handler.(RoutePatch)
+		if ok {
+			return h.Patch, true
+		}
+	case "CONNECT":
+		h,ok := handler.(RouteConnect)
+		if ok {
+			return h.Connect, true
+		}
+	case "HEAD":
+		h,ok := handler.(RouteHead)
+		if ok {
+			return h.Head, true
+		}
+	case "PROPFIND":
+		h,ok := handler.(RoutePropFind)
+		if ok {
+			return h.PropFind, true
+		}
+	case "PROPPATCH":
+		h,ok := handler.(RoutePropPatch)
+		if ok {
+			return h.PropPatch, true
+		}
+	case "MKCOL":
+		h,ok := handler.(RouteMkcol)
+		if ok {
+			return h.Mkcol, true
+		}
+	case "COPY":
+		h,ok := handler.(RouteCopy)
+		if ok {
+			return h.Copy, true
+		}
+	case "MOVE":
+		h,ok := handler.(RouteMove)
+		if ok {
+			return h.Move, true
+		}
+	case "LOCK":
+		h,ok := handler.(RouteLock)
+		if ok {
+			return h.Lock, true
+		}
+	case "UNLOCK":
+		h,ok := handler.(RouteUnlock)
+		if ok {
+			return h.Unlock, true
 		}
 	default:
 		h, ok := handler.(RouteProcessor)
@@ -168,42 +190,28 @@ func findHandler(handler interface{}, method string) (ReqHandler, bool) {
 
 func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, urlPath string) interface{} {
 	method := strings.ToUpper(r.Method)
-	handlers, routeData, area, err := s.routing.lookup(urlPath)
+	handler, routeData, area, err := s.routing.lookup(urlPath)
 	assert.PanicErr(err)
-
-	var processor ReqHandler
-
-	if handlers != nil {
-		handler, ok := handlers[method]
+	var processor func(ctx *HttpCtx)interface{}
+	var filterFunc func(ctx *HttpCtx)
+	if handler == nil {
+		return nil
+	}
+	handlerFunc,ok := handler.(func(ctx *HttpCtx)interface{})
+	if ok {
+		processor = handlerFunc
+	} else {
+		p, ok := findHandler(handler, method)
 		if ok {
-			if handler == nil {
-				return nil
-			}
-			p, ok := handler.(ReqHandler)
+			filter, ok := handler.(RouteFilter)
 			if ok {
-				processor = p
-			} else {
-				return nil
+				filterFunc = filter.Filter
 			}
+			processor = p
 		} else {
-			handler, ok := handlers["*"]
-			if !ok || handler == nil {
-				return nil
-			}
-			switch handler.(type) {
-			case ReqHandler:
-				processor = handler.(ReqHandler)
-			default:
-				p, ok := findHandler(handler, method)
-				if ok {
-					processor = p
-				} else {
-					return nil
-				}
-			}
+			return nil
 		}
 	}
-
 	if processor != nil {
 		ctxId := atomic.AddUint64(&(s.ctxId), 1)
 		var ctx = &HttpCtx{
@@ -215,11 +223,18 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 			ctxId:     ctxId,
 		}
 		if area != nil {
-			area.fi
+			area.hijackColl.exec(urlPath, ctx)
+		} else {
+			s.hijackColl.exec(urlPath, ctx)
 		}
-		s.filters.exec(urlPath, ctx)
 		if ctx.ended {
 			return &emptyResult{}
+		}
+		if filterFunc != nil {
+			filterFunc(ctx)
+			if ctx.ended {
+				return &emptyResult{}
+			}
 		}
 		return processor(ctx)
 	}

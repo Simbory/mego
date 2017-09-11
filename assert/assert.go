@@ -14,7 +14,7 @@ func PanicErr(err error) {
 // Assert assert that the checkFunc should be passed, or the program will panic error.
 func Assert(argName string, assertFunc func() bool) {
 	if !assertFunc() {
-		panic(fmt.Errorf("Invalid value of parameter/argument '%s'", argName))
+		panic(fmt.Errorf("invalid value of parameter/argument '%s'", argName))
 	}
 }
 
