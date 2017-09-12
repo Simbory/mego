@@ -66,11 +66,11 @@ func handleCache(ctx *mego.HttpCtx) interface{} {
 }
 
 func main() {
-	server := mego.NewServer(mego.WorkingDir(), ":8080", ".gohtml")
-	server.Get("/", handleHome)
-	server.Get("/test-session", handleSession)
-	server.Get("/test-cache", handleCache)
-	server.HandleFilter("/*", pageFilter)
+	server := mego.NewServer(mego.WorkingDir(), ":8080")
+	server.Route("/", handleHome)
+	server.Route("/test-session", handleSession)
+	server.Route("/test-cache", handleCache)
+	server.HijackRequest("/", pageFilter)
 
 	sessionProvider := memory.NewProvider()
 	sessionManager := session.CreateManager(nil, sessionProvider)

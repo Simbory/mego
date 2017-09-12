@@ -28,6 +28,7 @@ type ViewEngine struct {
 	watcher *fswatcher.FileWatcher
 }
 
+// AddFunc add new view func to the view files
 func (engine *ViewEngine) AddFunc(name string, viewFunc interface{}) {
 	if len(name) < 1 || viewFunc == nil {
 		return
@@ -189,12 +190,12 @@ func (engine *ViewEngine) compile() error {
 }
 
 func (engine *ViewEngine) includeView(viewName string, data interface{}) template.HTML {
-	buf := &bytes.Buffer{}
-	err := engine.Render(buf, viewName, data)
+	str, err := engine.RenderStr(viewName, data)
 	assert.PanicErr(err)
-	return template.HTML(buf.Bytes())
+	return template.HTML(str)
 }
 
+// Clear clear all the cache in the view engine. and re-compile the view files into memory at next call 'Render' or 'RenderStr'
 func (engine *ViewEngine) Clear() {
 	engine.locker.Lock()
 	defer engine.locker.Unlock()
@@ -203,9 +204,16 @@ func (engine *ViewEngine) Clear() {
 	engine.viewMap = nil
 }
 
+// Render render the view file with given data and then write the result to an io writer.
+// viewPath: the relative view file path that will be rendered.
+// viewData: the view data
+// writer: the given io writer
 func (engine *ViewEngine) Render(writer io.Writer, viewPath string, viewData interface{}) error {
+	if writer == nil {
+		return errors.New("invalid writer")
+	}
 	if len(viewPath) < 1 {
-		return errors.New("the parameter 'viewPath' cannot be empty")
+		return errors.New("invalid viewPath")
 	}
 	if !strings.HasSuffix(viewPath, engine.viewExt) {
 		viewPath = viewPath + engine.viewExt
@@ -223,13 +231,31 @@ func (engine *ViewEngine) Render(writer io.Writer, viewPath string, viewData int
 	if tpl == nil {
 		return fmt.Errorf("the view file '%s' cannot be found", viewPath)
 	}
-	err = tpl.Execute(writer, viewData)
+	buf := &bytes.Buffer{}
+	err = tpl.Execute(buf, viewData)
 	if err != nil {
 		return err
+	} else {
+		io.Copy(writer, buf)
 	}
 	return nil
 }
 
+// RenderStr render the view file with given data then get the result.
+// viewPath: the relative view file path that will be rendered
+// viewData: the view data
+func (engine *ViewEngine) RenderStr(viewPath string, viewData interface{}) (string, error) {
+	buf := &bytes.Buffer{}
+	err := engine.Render(buf, viewPath, viewData)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// NewEngine create a new view engine.
+// rootDir: the root dir of the view files;
+// ext: the view file extension(starts with "."), and the default file extension is '.gohtml';
 func NewEngine(rootDir, ext string) (*ViewEngine, error) {
 	if len(ext) == 0 {
 		ext = ".gohtml"

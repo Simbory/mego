@@ -27,6 +27,8 @@ type FileWatcher struct {
 }
 
 // AddWatch add path to watch
+// path: the path to watch
+// subDir: true to watch the sub directory; false to not watch the sub directory
 func (fw *FileWatcher) AddWatch(path string, subDir bool) error {
 	path = pathPkg.Clean(strings.Replace(path, "\\", "/", -1))
 	stat, err := os.Stat(path)
