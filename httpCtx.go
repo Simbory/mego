@@ -21,10 +21,11 @@ type HttpCtx struct {
 	routeData   map[string]string
 	ended       bool
 	ctxItems    map[string]interface{}
-	server      *Server
 	area        *Area
 	ctxId       uint64
 	queryValues *url.Values
+
+	Server *Server
 }
 
 // CtxId get the http context id
@@ -116,12 +117,12 @@ func (ctx *HttpCtx) RemoveCtxItem(key string) {
 
 // MapRootPath Returns the physical file path that corresponds to the specified virtual path.
 func (ctx *HttpCtx) MapRootPath(path string) string {
-	return ctx.server.MapRootPath(path)
+	return ctx.Server.MapRootPath(path)
 }
 
 // MapContentPath Returns the physical file path that corresponds to the specified virtual path.
 func (ctx *HttpCtx) MapContentPath(urlPath string) string {
-	return ctx.server.MapContentPath(urlPath)
+	return ctx.Server.MapContentPath(urlPath)
 }
 
 // TextResult generate the mego result as plain text
@@ -172,8 +173,8 @@ func (ctx *HttpCtx) ViewResult(viewName string, data interface{}) Result {
 		ctx.area.initViewEngine()
 		return ctx.area.viewEngine.Render(viewName, data)
 	} else {
-		ctx.server.initViewEngine()
-		return ctx.server.viewEngine.Render(viewName, data)
+		ctx.Server.initViewEngine()
+		return ctx.Server.viewEngine.Render(viewName, data)
 	}
 }
 

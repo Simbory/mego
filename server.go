@@ -219,7 +219,7 @@ func (s *Server) processDynamicRequest(w http.ResponseWriter, r *http.Request, u
 			req:       r,
 			res:       w,
 			routeData: routeData,
-			server:    s,
+			Server:    s,
 			area:      area,
 			ctxId:     ctxId,
 		}
