@@ -129,6 +129,71 @@ func (s *Server) RunTLS(certFile, keyFile string) {
 	assert.PanicErr(err)
 }
 
+func (s *Server) SetVar(key string, v interface{}) {
+	s.serverVar[key] = v
+}
+
+func (s *Server) GetVar(key string) interface{} {
+	v,ok := s.serverVar[key]
+	if ok {
+		return v
+	} else {
+		return nil
+	}
+}
+
+func (s *Server) GetVarInt(key string, defaultValue int) int {
+	v := s.GetVar(key)
+	if v == nil {
+		return defaultValue
+	}
+	val,ok := v.(int)
+	if ok {
+		return val
+	} else {
+		return defaultValue
+	}
+}
+
+func (s *Server) GetVarStr(key string, defaultValue string) string {
+	v := s.GetVar(key)
+	if v == nil {
+		return defaultValue
+	}
+	val,ok := v.(string)
+	if ok {
+		return val
+	} else {
+		return defaultValue
+	}
+}
+
+func (s *Server) GetVarBool(key string, defaultValue bool) bool {
+	v := s.GetVar(key)
+	if v == nil {
+		return defaultValue
+	}
+	val,ok := v.(bool)
+	if ok {
+		return val
+	} else {
+		return defaultValue
+	}
+}
+
+func (s *Server) GetVarFloat(key string, defaultValue float64) float64 {
+	v := s.GetVar(key)
+	if v == nil {
+		return defaultValue
+	}
+	val,ok := v.(float64)
+	if ok {
+		return val
+	} else {
+		return defaultValue
+	}
+}
+
 // NewServer create a new server
 //
 // webRoot: the root of this web server. and the content root is '${webRoot}/www'
@@ -151,6 +216,7 @@ func NewServer(webRoot, addr string) *Server {
 		err400Handler: handle400,
 		err403Handler: handle403,
 		hijackColl:    make(hijackContainer),
+		serverVar:     make(map[string]interface{}),
 	}
 	return s
 }

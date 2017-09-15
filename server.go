@@ -38,6 +38,7 @@ type Server struct {
 	viewEngine    *ViewEngine
 	engineLock    sync.RWMutex
 	ctxId         uint64
+	serverVar     map[string]interface{}
 }
 
 // assertUnlocked assert that the server is not running
